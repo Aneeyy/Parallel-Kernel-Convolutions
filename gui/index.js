@@ -1,20 +1,22 @@
-const { app, BrowserWindow } = require('electron')
-
+const { app,dialog } = require('electron')
+const { BrowserWindow } = require('electron').remote;
 function createWindow () {
 // Create the browser window.
     const win = new BrowserWindow({
         width: 800,
         height: 600,
         webPreferences: {
-        nodeIntegration: true
-    }
+            nodeIntegration: true,
+            enableRemoteModule: true,
+
+        }
     })
 
     // and load the index.html of the app.
     win.loadFile('index.html')
 
     // Open the DevTools.
-    win.webContents.openDevTools()
+    //win.webContents.openDevTools()
 }
 
 // This method will be called when Electron has finished

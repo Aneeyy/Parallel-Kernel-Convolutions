@@ -6,27 +6,22 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
-
     <div class="TopBar">
         <p class="Title">Kernel Convolutions!</p>
 
     </div>
     <div class="MainContentContainer">
-        <div class="LeftContainer Container">
-            <div class="Instructions">
-
-                <p class="Instruction">1. Upload an Image</p>
-
+        <div id="LeftContainer" class="LeftContainer Container">
+            <div id="dragMask" class="DragMask" style="display:none"></div>
+            <div id="leftContainerInstruction" class="Instructions">
+<!--                <p class="Instruction"></p>-->
+                <button onclick="openFileSelectDialog()">1. Upload an Image(or Drag/Drop)</button>
+            </div>
+            <div id="leftImageContainer" class="ImageContainer" style="display:none">
 
             </div>
         </div>
-        <div class="Separator">
-            <div class="Arrow">
-                <div class="Arrow_Head"></div>
-                <div class="Arrow_Tail"></div>
-                <p class="Instruction Arrow_Instruction">3. Go!</p>
-            </div>
-        </div>
+
         <div class="RightContainer Container">
             <div class="Instructions">
 
@@ -37,8 +32,24 @@
 
             </div>
         </div>
+        <div class="Separator">
+            <div class="Arrow" style="display:none">
+                <div class="Arrow_Head"></div>
+                <div class="Arrow_Tail"></div>
+                <div class="Arrow_Instructions">
+                    <p class="Instruction Arrow_Instruction">3. Go!</p>
+                </div>
+            </div>
+            <button>Perform Filter</button>
+            <div class="TimingData"></div>
+            <button onclick="clearFiles()">Change Kernel Values</button>
+            <button onclick="clearFiles()">Upload New Image</button>
+
+        </div>
 
     </div>
 
 </body>
+    <script src="main.js"></script>
+
 </html>
