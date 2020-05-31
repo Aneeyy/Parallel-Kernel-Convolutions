@@ -1,6 +1,10 @@
 const {remote,dialog,app} = require('electron').remote;
 const fs = require('fs');
 const path = require("path");
+const { spawn } = require('child_process');
+
+const pythonScript = "../python/dummyPythonScript.py"
+const openMPExecutable = "../OpenMP/openMP"
 
 let kernel = null;
 
@@ -20,21 +24,30 @@ function writeJSON(fileName, object){
     fs.writeFileSync(path.join(transferDataDirectory,fileName),  JSON.stringify(object));
 }
 
-function setConfigInputFile(path){
+function setConfigKernel(){
+    loadJSON("config.json", (data)=>{
+        data.kernel = kernel;
+        writeJSON("config.json",data);
+    });
+}
+
+function setConfigInputFile(path,openMPPath){
     loadJSON("config.json", (data)=>{
         data.fileInputLocation = path;
+        data.openMPOutputLocation = openMPPath;
         writeJSON("config.json",data);
     });
 }
 
 function copyImageFile(imagePath){
     let newImagePath = path.join(transferDataDirectory,path.basename(imagePath));
+    let openMPPath = path.join(transferDataDirectory,"OMP-"+path.basename(imagePath));
     console.log("new Image path: ",newImagePath);
 
     fs.copyFile(imagePath, newImagePath, (err) => {
         if (err) throw err;
 
-        setConfigInputFile(newImagePath);
+        setConfigInputFile(newImagePath,openMPPath);
 
         // document.getElementById("leftContainerInstruction").style.display = "none";
         let leftImageContainer = document.getElementById("leftImageContainer")
@@ -233,6 +246,35 @@ function changeKernelSize(){
         document.getElementById("fiveKernel").style.display = "flex";
 
     }
+}
+
+function performFilter(){
+    setConfigKernel();
+    clearOldTimingData();
+
+    const pythonChild = spawn("python",[pythonScript]);
+    const openMPChild = spawn(openMPExecutable);
+
+    pythonChild.stdout.on('data', (data) => {
+        console.log(`python stdout: ${data}`);
+    });
+    pythonChild.stderr.on('data', (data) => {
+        console.log(`python stderr: ${data}`);
+    });
+    openMPChild.stdout.on('data', (data) => {
+        console.log(`openMP stdout: ${data}`);
+    });
+    openMPChild.stderr.on('data', (data) => {
+        console.log(`openMP stderr: ${data}`);
+    });
+
+    pythonChild.on('close', (code) => {
+        console.log(`Python process exited with code ${code}`);
+    });
+
+    openMPChild.on('close', (code) => {
+        console.log(`openMP process exited with code ${code}`);
+    });
 }
 
 
