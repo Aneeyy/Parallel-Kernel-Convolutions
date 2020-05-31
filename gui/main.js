@@ -4,6 +4,7 @@ const path = require("path");
 
 let kernel = null;
 
+
 let transferDataDirectory = app.getAppPath()
 transferDataDirectory = transferDataDirectory.substr(0,transferDataDirectory.length-4)
 transferDataDirectory += "/transferData"
@@ -90,8 +91,15 @@ function loadConfigAndClearImageData(){
     let config;
     loadJSON("config.json", (data)=>{
         config = data;
+        if(validKernel(config.kernel)){
+            kernel = config.kernel;
+        }
+        else{
+            loadDefaultKernel();
+        }
+        syncKernelToGUI();
 
-        kernel = config.kernel;
+
        // config.kernel = kernel;
         config.fileInputLocation = null;
         writeJSON("config.json",config);
@@ -108,18 +116,130 @@ function loadDefaultKernel(){
         [0,1,0],
         [0,0,0]
     ]
+    syncKernelToGUI();
+}
+function createBlankKernel(size){
+    let kernel = []
+    for(let r = 0; r < size; r++){
+        let row = [];
+        for(let c = 0; c < size; c++){
+            row.push(0);
+        }
+        kernel.push(row);
+    }
+    return kernel;
+
+}
+function validKernel(k){
+    if(!k){
+        return k;
+    }
+    let size = k.length;
+    if(size !== 3 || size !== 5){
+        return false;
+    }
+
+    for(let r = 0; r < size; r++){
+        if(k[r].length !== size){
+            return false;
+        }
+        for(let c = 0; c < size; c++){
+            if(!Number.isInteger(k[r][c])){
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
+
+function syncKernelToGUI(){
+
+    let ks = "k";
+    if(kernel.length === 3) {
+        ks += "3";
+    }
+    else if(kernel.length === 5) {
+        ks += "5";
+    }
+
+    for(let r = 0; r < kernel.length; r++){
+        for(let c = 0; c< kernel.length; c++){
+            let kId = ks + "row" + (r+1) + "col" + (c+1);
+            document.getElementById(kId).value = kernel[r][c];
+        }
+    }
+
+}
+function readKernelFromGUI(){
+    let selector = document.getElementById("kernelSizeSelector");
+    let ks = "k";
+    if(selector.value === "3"){
+        ks += "3";
+    }
+    else if(selector.value === "5"){
+        ks += "5";
+    }
+    let n = parseInt(selector.value);
+    kernel = createBlankKernel(n);
+    for(let r = 0; r < kernel.length; r++){
+        for(let c = 0; c< kernel.length; c++){
+            let kId = ks + "row" + (r+1) + "col" + (c+1);
+             kernel[r][c] = document.getElementById(kId).value;
+        }
+    }
+
+}
+
+document.querySelectorAll('.kInput').forEach(item => {
+    item.addEventListener('change', (event) => {
+        readKernelFromGUI();
+        console.log(kernel);
+    })
+})
+
+
+function changeKernelSize(){
+    let selector = document.getElementById("kernelSizeSelector");
+    if(selector.value === "3"){
+        if(kernel.length !== 3){
+            let newKernel = createBlankKernel(3);
+            for(let r = 1; r < 4; r++){
+                for(let c = 1; c < 4; c++){
+                    newKernel[r-1][c-1] = kernel[r][c];
+                }
+            }
+            kernel = newKernel;
+            syncKernelToGUI();
+        }
+        document.getElementById("fiveKernel").style.display = "none";
+        document.getElementById("threeKernel").style.display = "flex";
+
+
+    }
+    else{
+        if(kernel.length !== 5){
+            let newKernel = createBlankKernel(5);
+            for(let r = 0; r < 3; r++){
+                for(let c = 0; c < 3; c++){
+                    newKernel[r+1][c+1] = kernel[r][c];
+                }
+            }
+            kernel = newKernel;
+            syncKernelToGUI();
+        }
+        document.getElementById("threeKernel").style.display = "none";
+        document.getElementById("fiveKernel").style.display = "flex";
+
+    }
+}
 
 
 function main(){
     clearOldImageFiles();
     clearOldTimingData();
-    loadConfigAndClearImageData((kernel)=>{
-        if(!kernel){
-            loadDefaultKernel();
-        }
-    })
+    loadConfigAndClearImageData()
 
 
 

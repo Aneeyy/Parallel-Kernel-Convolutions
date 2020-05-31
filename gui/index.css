@@ -53,6 +53,36 @@ body {
     background-color:#f4f4f4;
     box-sizing:border-box;
 }
+.KernelSelector {
+    display:flex;
+    justify-content:center;
+}
+.KernelContainer {
+    display:flex;
+    width:100%;
+    height:50%;
+    justify-content:center;
+
+}
+.Kernel {
+    display:flex;
+    flex-direction:column;
+    width:25vw;
+    height:25vw;
+    justify-content:space-around;
+
+}
+.KernelRow {
+    display:flex;
+    width:100%;
+    justify-content:space-around;
+
+}
+.KernelRow input {
+    width:15%;
+    height:100%;
+}
+
 .highlight {
     border:2px dashed orangered;
     background-color:#eeeeee;
