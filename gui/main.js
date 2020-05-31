@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require("path");
 const { spawn } = require('child_process');
 
-const pythonScript = "../python/dummyPythonScript.py"
+const pythonScript = "../python/kernelConvolution.py"
 const openMPExecutable = "../OpenMP/openMP"
 
 let kernel = null;
@@ -31,23 +31,26 @@ function setConfigKernel(){
     });
 }
 
-function setConfigInputFile(path,openMPPath){
+function setConfigInputFile(path,openMPPath,pythonPath){
     loadJSON("config.json", (data)=>{
         data.fileInputLocation = path;
         data.openMPOutputLocation = openMPPath;
+        data.pythonOutputLocation = pythonPath;
         writeJSON("config.json",data);
     });
 }
 
 function copyImageFile(imagePath){
+    clearOldImageFiles();
     let newImagePath = path.join(transferDataDirectory,path.basename(imagePath));
     let openMPPath = path.join(transferDataDirectory,"OMP-"+path.basename(imagePath));
+    let pythonPath = path.join(transferDataDirectory,"python-"+path.basename(imagePath));
     console.log("new Image path: ",newImagePath);
 
     fs.copyFile(imagePath, newImagePath, (err) => {
         if (err) throw err;
 
-        setConfigInputFile(newImagePath,openMPPath);
+        setConfigInputFile(newImagePath,openMPPath,pythonPath);
 
         // document.getElementById("leftContainerInstruction").style.display = "none";
         let leftImageContainer = document.getElementById("leftImageContainer")
@@ -95,6 +98,11 @@ function clearOldImageFiles(){
 }
 function clearOldTimingData(){
     let td = {"timing":null,fileOutputLocation:null};
+
+    document.getElementById("OMPTiming").innerHTML = "";
+    document.getElementById("pythonTiming").innerHTML = "";
+    document.getElementById("resultsDiff").innerHTML = "";
+    document.getElementById("usingImage").innerHTML = "";
 
     writeJSON("OMPTiming.json",td);
     writeJSON("pythonTiming.json",td);
@@ -248,12 +256,62 @@ function changeKernelSize(){
     }
 }
 
+function clearResultImage(){
+    document.getElementById("parameters").style.display = "flex";
+    document.getElementById("imageResults").style.display = "none";
+}
+function displayResults(OMPTiming,pythonTiming){
+    let fastestTiming = OMPTiming;
+    let using = "OMP"
+    if(pythonTiming.timing < OMPTiming.timing){
+        fastestTiming = pythonTiming;
+        using = "Python"
+    }
+
+    let rightImageContainer = document.getElementById("rightImageContainer")
+    rightImageContainer.innerHTML = "<img src='" + fastestTiming.fileOutputLocation + "'>"
+    rightImageContainer.style.display = "flex";
+
+    document.getElementById("parameters").style.display = "none";
+    document.getElementById("imageResults").style.display = "flex";
+
+    document.getElementById("OMPTiming").innerHTML = "OMP Time: " + OMPTiming.timing + "s";
+    document.getElementById("pythonTiming").innerHTML = "Python Time: " + pythonTiming.timing + "s";
+    //document.getElementById("resultsDiff").innerHTML = "Results Diff: "
+    document.getElementById("usingImage").innerHTML = "Image From: " + using;
+
+    //const pythonChild = spawn("diff",[pythonScript]);
+
+
+
+}
+
+function getAndDisplayResults(){
+    let OMPTiming, pythonTiming;
+
+    loadJSON("../transferData/OMPTiming.json", (t)=>{
+        OMPTiming = t;
+        if(pythonTiming){
+            displayResults(OMPTiming,pythonTiming);
+        }
+    })
+    loadJSON("../transferData/pythonTiming.json", (t)=>{
+        pythonTiming = t;
+        if(OMPTiming){
+            displayResults(OMPTiming,pythonTiming);
+        }
+    })
+
+}
+
 function performFilter(){
     setConfigKernel();
     clearOldTimingData();
 
     const pythonChild = spawn("python",[pythonScript]);
     const openMPChild = spawn(openMPExecutable);
+    let pythonDone = false;
+    let openMPDone = false;
 
     pythonChild.stdout.on('data', (data) => {
         console.log(`python stdout: ${data}`);
@@ -268,13 +326,24 @@ function performFilter(){
         console.log(`openMP stderr: ${data}`);
     });
 
+
     pythonChild.on('close', (code) => {
         console.log(`Python process exited with code ${code}`);
+        pythonDone = true;
+        if(openMPDone && pythonDone){
+            getAndDisplayResults();
+        }
     });
 
     openMPChild.on('close', (code) => {
         console.log(`openMP process exited with code ${code}`);
+        openMPDone = true;
+        if(openMPDone && pythonDone){
+            getAndDisplayResults();
+        }
     });
+
+
 }
 
 

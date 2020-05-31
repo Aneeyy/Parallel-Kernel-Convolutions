@@ -23,76 +23,86 @@
         </div>
 
         <div class="RightContainer Container">
-            <div class="Instructions">
-                <p class="Instruction">Specify parameters</p>
+            <div class="FullSizeContentTab" id="parameters" >
 
-            </div>
-            <div class="KernelSelector">
-                <select id="kernelSizeSelector" onchange="changeKernelSize()">
-                    <option value="3">3X3 Kernel</option>
-                    <option value="5">5X5 Kernel</option>
-                </select>
-            </div>
-            <div class="KernelContainer">
-
-                <div id="threeKernel" class="Kernel" >
-                    <div id="k3row1" class="KernelRow">
-                        <input id="k3row1col1" class="kInput" type="number">
-                        <input id="k3row1col2" class="kInput" type="number">
-                        <input id="k3row1col3" class="kInput" type="number">
-                    </div>
-                    <div id="k3row2" class="KernelRow">
-                        <input id="k3row2col1" class="kInput" type="number">
-                        <input id="k3row2col2" class="kInput" type="number" >
-                        <input id="k3row2col3" class="kInput" type="number" >
-                    </div>
-                     <div id="k3row3" class="KernelRow">
-                        <input id="k3row3col1" class="kInput" type="number">
-                        <input id="k3row3col2" class="kInput" type="number" >
-                        <input id="k3row3col3" class="kInput" type="number" >
-                    </div>
-                </div>
-                <div id="fiveKernel" class="Kernel" style="display:none;">
-                    <div id="k5row1" class="KernelRow">
-                        <input id="k5row1col1" class="kInput" type="number">
-                        <input id="k5row1col2" class="kInput" type="number">
-                        <input id="k5row1col3" class="kInput" type="number">
-                        <input id="k5row1col4" class="kInput" type="number">
-                        <input id="k5row1col5" class="kInput" type="number">
-                    </div>
-                    <div id="k5row2" class="KernelRow">
-                        <input id="k5row2col1" class="kInput" type="number">
-                        <input id="k5row2col2" class="kInput" type="number" >
-                        <input id="k5row2col3" class="kInput" type="number" >
-                        <input id="k5row2col4" class="kInput" type="number">
-                        <input id="k5row2col5" class="kInput" type="number">
-                    </div>
-                     <div id="k5row3" class="KernelRow">
-                        <input id="k5row3col1" class="kInput" type="number" >
-                        <input id="k5row3col2" class="kInput" type="number" >
-                        <input id="k5row3col3" class="kInput" type="number" >
-                        <input id="k5row3col4" class="kInput" type="number">
-                        <input id="k5row3col5" class="kInput" type="number">
-                    </div>
-                    <div id="k5row4" class="KernelRow">
-                        <input id="k5row4col1" class="kInput" type="number" >
-                        <input id="k5row4col2" class="kInput" type="number" >
-                        <input id="k5row4col3" class="kInput" type="number" >
-                        <input id="k5row4col4" class="kInput" type="number">
-                        <input id="k5row4col5" class="kInput" type="number">
-                    </div>
-                    <div id="k5row5" class="KernelRow">
-                        <input id="k5row5col1" class="kInput" type="number" >
-                        <input id="k5row5col2" class="kInput" type="number" >
-                        <input id="k5row5col3" class="kInput" type="number" >
-                        <input id="k5row5col4" class="kInput" type="number">
-                        <input id="k5row5col5" class="kInput" type="number">
-                    </div>
-
-
+                <div class="Instructions">
+                    <p class="Instruction">Specify parameters</p>
 
                 </div>
+                <div class="KernelSelector">
+                    <select id="kernelSizeSelector" onchange="changeKernelSize()">
+                        <option value="3">3X3 Kernel</option>
+                        <option value="5">5X5 Kernel</option>
+                    </select>
+                </div>
+                <div class="KernelContainer">
 
+                    <div id="threeKernel" class="Kernel" >
+                        <div id="k3row1" class="KernelRow">
+                            <input id="k3row1col1" class="kInput" type="number">
+                            <input id="k3row1col2" class="kInput" type="number">
+                            <input id="k3row1col3" class="kInput" type="number">
+                        </div>
+                        <div id="k3row2" class="KernelRow">
+                            <input id="k3row2col1" class="kInput" type="number">
+                            <input id="k3row2col2" class="kInput" type="number" >
+                            <input id="k3row2col3" class="kInput" type="number" >
+                        </div>
+                         <div id="k3row3" class="KernelRow">
+                            <input id="k3row3col1" class="kInput" type="number">
+                            <input id="k3row3col2" class="kInput" type="number" >
+                            <input id="k3row3col3" class="kInput" type="number" >
+                        </div>
+                    </div>
+                    <div id="fiveKernel" class="Kernel" style="display:none;">
+                        <div id="k5row1" class="KernelRow">
+                            <input id="k5row1col1" class="kInput" type="number">
+                            <input id="k5row1col2" class="kInput" type="number">
+                            <input id="k5row1col3" class="kInput" type="number">
+                            <input id="k5row1col4" class="kInput" type="number">
+                            <input id="k5row1col5" class="kInput" type="number">
+                        </div>
+                        <div id="k5row2" class="KernelRow">
+                            <input id="k5row2col1" class="kInput" type="number">
+                            <input id="k5row2col2" class="kInput" type="number" >
+                            <input id="k5row2col3" class="kInput" type="number" >
+                            <input id="k5row2col4" class="kInput" type="number">
+                            <input id="k5row2col5" class="kInput" type="number">
+                        </div>
+                         <div id="k5row3" class="KernelRow">
+                            <input id="k5row3col1" class="kInput" type="number" >
+                            <input id="k5row3col2" class="kInput" type="number" >
+                            <input id="k5row3col3" class="kInput" type="number" >
+                            <input id="k5row3col4" class="kInput" type="number">
+                            <input id="k5row3col5" class="kInput" type="number">
+                        </div>
+                        <div id="k5row4" class="KernelRow">
+                            <input id="k5row4col1" class="kInput" type="number" >
+                            <input id="k5row4col2" class="kInput" type="number" >
+                            <input id="k5row4col3" class="kInput" type="number" >
+                            <input id="k5row4col4" class="kInput" type="number">
+                            <input id="k5row4col5" class="kInput" type="number">
+                        </div>
+                        <div id="k5row5" class="KernelRow">
+                            <input id="k5row5col1" class="kInput" type="number" >
+                            <input id="k5row5col2" class="kInput" type="number" >
+                            <input id="k5row5col3" class="kInput" type="number" >
+                            <input id="k5row5col4" class="kInput" type="number">
+                            <input id="k5row5col5" class="kInput" type="number">
+                        </div>
+
+
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="FullSizeContentTab" id="imageResults" style="display:none">
+                <div class="Instructions">
+                    <button onclick="clearResultImage()">Change Parameters</button>
+                </div>
+                <div id="rightImageContainer" class="ImageContainer" >
+                </div>
             </div>
         </div>
         <div class="Separator">
@@ -104,8 +114,12 @@
                 </div>
             </div>
             <button onclick="performFilter()">Perform Filter</button>
-            <div class="TimingData"></div>
-            <button onclick="clearFiles()">Change Kernel Values</button>
+            <div class="TimingData">
+                <p id="OMPTiming"></p>
+                <p id="pythonTiming"></p>
+                <p id="resultsDiff"></p>
+            </div>
+<!--            <button onclick="clearFiles()">Change Kernel Values</button>-->
 
         </div>
 

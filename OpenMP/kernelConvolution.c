@@ -81,12 +81,12 @@ int main() {
 
     //This copy file function is in place of the filter that has to be written
     //In the implementation, read image from the input file, and write image to output file
-    //then replace the .01 with the seconds it took to perform the kernel convolution
+    //then replace the 100.02 with the seconds it took to perform the kernel convolution
     copyFile(fileInputLocation,fileOutputLocation);
 
 
 
     //replace the .02 with the actual timing(its a double (seconds))
-    writeToTimingJSON(0.02, fileOutputLocation);
+    writeToTimingJSON(100.02, fileOutputLocation);
     return 0;
 }
