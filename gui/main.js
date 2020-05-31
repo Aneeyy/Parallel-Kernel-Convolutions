@@ -102,7 +102,7 @@ function clearOldTimingData(){
     document.getElementById("OMPTiming").innerHTML = "";
     document.getElementById("pythonTiming").innerHTML = "";
     document.getElementById("resultsDiff").innerHTML = "";
-    document.getElementById("usingImage").innerHTML = "";
+    // document.getElementById("usingImage").innerHTML = "";
 
     writeJSON("OMPTiming.json",td);
     writeJSON("pythonTiming.json",td);

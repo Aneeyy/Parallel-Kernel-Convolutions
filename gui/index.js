@@ -1,5 +1,5 @@
 const { app,dialog } = require('electron')
-const { BrowserWindow } = require('electron').remote;
+const { BrowserWindow } = require('electron');
 function createWindow () {
 // Create the browser window.
     const win = new BrowserWindow({

@@ -84,7 +84,8 @@ int main() {
     //then replace the 100.02 with the seconds it took to perform the kernel convolution
     copyFile(fileInputLocation,fileOutputLocation);
 
-
+    double[][] kernel
+    double kSize = 3;//5
 
     //replace the .02 with the actual timing(its a double (seconds))
     writeToTimingJSON(100.02, fileOutputLocation);
