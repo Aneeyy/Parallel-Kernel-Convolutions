@@ -109,10 +109,11 @@ int main() {
     char* fileOutputLocation = fileOutputJSON->valuestring;
 
     int kernelSize = -1;
+    int numThreads = (int)cJSON_GetNumberValue( cJSON_GetObjectItem(configjson,"numThreads"));
     double ** kernel = getKernel(configjson, &kernelSize);
 
     //print the kernel
-    printf("kernel size: %d\n",kernelSize);
+    printf("kernel size: %d , num threads: %d\n",kernelSize,numThreads);
     for(int r = 0; r< kernelSize; r++){
         for(int c = 0; c< kernelSize; c++){
             printf("%f \t",kernel[r][c]);

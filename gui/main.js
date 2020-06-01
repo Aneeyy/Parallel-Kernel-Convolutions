@@ -8,7 +8,8 @@ const pythonScript = "../python/kernelConvolution.py"
 const openMPExecutable = "../OpenMP/openMP"
 
 let kernel = null;
-
+let numThreads = 1;
+let state = {"imageReady":false,"kernelReady":false, "numThreadsReady": false}
 
 let transferDataDirectory = app.getAppPath()
 transferDataDirectory = transferDataDirectory.substr(0,transferDataDirectory.length-4)
@@ -21,26 +22,62 @@ function loadJSON(fileName, cb){
     });
 }
 
-function writeJSON(fileName, object){
-    fs.writeFileSync(path.join(transferDataDirectory,fileName),  JSON.stringify(object));
+function writeJSON(fileName, object, cb){
+    fs.writeFile(path.join(transferDataDirectory,fileName),  JSON.stringify(object),(err)=>{
+        if(err) throw err;
+        if(cb){
+            cb();
+        }
+
+
+    });
 }
 
 function setConfigKernel(){
     loadJSON("config.json", (data)=>{
         data.kernel = kernel;
-        writeJSON("config.json",data);
+        writeJSON("config.json",data, ()=>{
+            state.kernelReady = true;
+        });
     });
 }
+
 
 function setConfigInputFile(path,openMPPath,pythonPath){
     loadJSON("config.json", (data)=>{
         data.fileInputLocation = path;
         data.openMPOutputLocation = openMPPath;
         data.pythonOutputLocation = pythonPath;
-        writeJSON("config.json",data);
+        writeJSON("config.json",data, ()=>{
+            state.imageReady = true;
+        });
     });
 }
+function setConfigNumThreads(nt){
+    loadJSON("config.json", (data)=>{
+        data.numThreads = nt;
+        writeJSON("config.json",data, ()=>{
+             state.numThreadsReady = true;
+        });
+    });
+}
+function makeValidThreadNum(nt){
+    if(!nt || nt < 0){
+        return 1;
+    }
+    if(nt > 64){
+        nt = 64;
+    }
+    return nt;
+}
+function updateNumThreads(){
+    let threadSelector = document.getElementById("numThreadsInput")
+    let nt = Number(threadSelector.value);
+    nt = makeValidThreadNum(nt)
+    threadSelector.value = nt;
+    setConfigNumThreads(nt);
 
+}
 function copyImageFile(imagePath){
     clearOldImageFiles();
 
@@ -72,6 +109,7 @@ function copyImageFile(imagePath){
 
                 image.write(newImagePathBMP,()=>{
                     setConfigInputFile(newImagePathBMP,openMPPath,pythonPath);
+
                 })
 
             })
@@ -113,6 +151,8 @@ function openFileSelectDialog(){
 }
 
 function clearOldImageFiles(){
+    state.imageReady = false;
+
     fs.readdir(transferDataDirectory, (err, files) => {
         if (err) throw err;
 
@@ -145,11 +185,18 @@ function loadConfigAndClearImageData(){
         config = data;
         if(validKernel(config.kernel)){
             kernel = config.kernel;
+            state.kernelReady = true;
         }
         else{
             loadDefaultKernel();
         }
         syncKernelToGUI();
+
+        let nt = makeValidThreadNum(data.numThreads);
+
+        setConfigNumThreads(nt);
+
+        document.getElementById("numThreadsInput").value = nt;
 
 
        // config.kernel = kernel;
@@ -168,6 +215,8 @@ function loadDefaultKernel(){
         [0,1,0],
         [0,0,0]
     ]
+    setConfigKernel();
+
     syncKernelToGUI();
 }
 function createBlankKernel(size){
@@ -355,6 +404,11 @@ function getAndDisplayResults(){
 
 function performFilter(){
     setConfigKernel();
+    if(!state.kernelReady || !state.numThreadsReady || !state.imageReady){
+        console.log("not ready to perform filter" ,state);
+        return;
+    }
+
     clearOldTimingData();
 
     const pythonChild = spawn("python",[pythonScript]);

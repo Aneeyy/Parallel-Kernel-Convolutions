@@ -107,6 +107,34 @@ body {
     flex-direction:column;
     align-items:flex-start;
 }
+
+.NumThreadsSelectorContainer {
+    display:flex;
+    width:100%;
+    /*flex-grow:1;*/
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    height:40%;
+}
+.NumThreadsSelector {
+    display:flex;
+    flex-direction:row;
+    width:60%;
+    height:20%;
+
+    justify-content:space-around;
+    align-content:space-between;
+}
+.NumThreadsInput{
+    width:30%;
+}
+.NumThreadsLabel{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-content:center;
+}
 .Arrow {
     box-sizing: border-box;
     display:flex;

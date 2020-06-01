@@ -11,7 +11,7 @@ if inputFile:
     transferDataDir = os.path.join(os.path.dirname(os.getcwd()),'transferData')
     fileOutputLocation = config['pythonOutputLocation']#os.path.join(transferDataDir,"python-" + os.path.basename(inputFile))
     kernel = config['kernel']
-
+    numThreads = config['numThreads']
     print(kernel)
 
     #This copy file function is in place of the filter that has to be written
