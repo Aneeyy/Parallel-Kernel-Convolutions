@@ -2,6 +2,7 @@ const {remote,dialog,app} = require('electron').remote;
 const fs = require('fs');
 const path = require("path");
 const { spawn } = require('child_process');
+const Jimp = require("jimp")
 
 const pythonScript = "../python/kernelConvolution.py"
 const openMPExecutable = "../OpenMP/openMP"
@@ -42,23 +43,53 @@ function setConfigInputFile(path,openMPPath,pythonPath){
 
 function copyImageFile(imagePath){
     clearOldImageFiles();
-    let newImagePath = path.join(transferDataDirectory,path.basename(imagePath));
-    let openMPPath = path.join(transferDataDirectory,"OMP-"+path.basename(imagePath));
-    let pythonPath = path.join(transferDataDirectory,"python-"+path.basename(imagePath));
+
+    let oldName = path.basename(imagePath);
+    let ext = path.extname(imagePath);
+    let newName = oldName.substring(0,oldName.length-ext.length) + ".bmp";
+    console.log("new name: " + newName);
+
+    let newImagePath = path.join(transferDataDirectory,oldName);
+    let newImagePathBMP = path.join(transferDataDirectory,newName);
+    let openMPPath = path.join(transferDataDirectory,"OMP-"+newName);
+    let pythonPath = path.join(transferDataDirectory,"python-"+newName);
     console.log("new Image path: ",newImagePath);
 
-    fs.copyFile(imagePath, newImagePath, (err) => {
-        if (err) throw err;
+    Jimp.read(imagePath, function (err, image) {
+        if (err) {
+            console.log(err)
+        } else {
 
-        setConfigInputFile(newImagePath,openMPPath,pythonPath);
 
-        // document.getElementById("leftContainerInstruction").style.display = "none";
-        let leftImageContainer = document.getElementById("leftImageContainer")
-        leftImageContainer.innerHTML = "<img src='" + newImagePath + "'>"
+            image.write(newImagePath, ()=>{
 
-        leftImageContainer.style.display = "flex";
 
-    });
+                // document.getElementById("leftContainerInstruction").style.display = "none";
+                let leftImageContainer = document.getElementById("leftImageContainer")
+                leftImageContainer.innerHTML = "<img src='" + newImagePath + "'>"
+
+                leftImageContainer.style.display = "flex";
+
+                image.write(newImagePathBMP,()=>{
+                    setConfigInputFile(newImagePathBMP,openMPPath,pythonPath);
+                })
+
+            })
+
+        }
+    })
+    // fs.copyFile(imagePath, newImagePath, (err) => {
+    //     if (err) throw err;
+    //
+    //     setConfigInputFile(newImagePath,openMPPath,pythonPath);
+    //
+    //     // document.getElementById("leftContainerInstruction").style.display = "none";
+    //     let leftImageContainer = document.getElementById("leftImageContainer")
+    //     leftImageContainer.innerHTML = "<img src='" + newImagePath + "'>"
+    //
+    //     leftImageContainer.style.display = "flex";
+    //
+    // });
 }
 
 function openFileSelectDialog(){
@@ -268,17 +299,35 @@ function displayResults(OMPTiming,pythonTiming){
         using = "Python"
     }
 
-    let rightImageContainer = document.getElementById("rightImageContainer")
-    rightImageContainer.innerHTML = "<img src='" + fastestTiming.fileOutputLocation + "'>"
-    rightImageContainer.style.display = "flex";
 
-    document.getElementById("parameters").style.display = "none";
-    document.getElementById("imageResults").style.display = "flex";
+    Jimp.read(fastestTiming.fileOutputLocation, function (err, image) {
+        if (err) {
+            console.log(err)
+        }
+        else {
+            let newFileLocation = fastestTiming.fileOutputLocation.substring(0,fastestTiming.fileOutputLocation.length-4)
+            newFileLocation += ".png";
+            image.write(newFileLocation, ()=>{
 
-    document.getElementById("OMPTiming").innerHTML = "OMP Time: " + OMPTiming.timing + "s";
-    document.getElementById("pythonTiming").innerHTML = "Python Time: " + pythonTiming.timing + "s";
-    //document.getElementById("resultsDiff").innerHTML = "Results Diff: "
-    document.getElementById("usingImage").innerHTML = "Image From: " + using;
+
+                let rightImageContainer = document.getElementById("rightImageContainer")
+                rightImageContainer.innerHTML = "<img src='" + fastestTiming.fileOutputLocation + "'>"
+                rightImageContainer.style.display = "flex";
+
+                document.getElementById("parameters").style.display = "none";
+                document.getElementById("imageResults").style.display = "flex";
+
+                document.getElementById("OMPTiming").innerHTML = "OMP Time: " + OMPTiming.timing + "s";
+                document.getElementById("pythonTiming").innerHTML = "Python Time: " + pythonTiming.timing + "s";
+                //document.getElementById("resultsDiff").innerHTML = "Results Diff: "
+                // document.getElementById("usingImage").innerHTML = "Image From: " + using;
+
+            })
+
+        }
+    })
+
+
 
     //const pythonChild = spawn("diff",[pythonScript]);
 
