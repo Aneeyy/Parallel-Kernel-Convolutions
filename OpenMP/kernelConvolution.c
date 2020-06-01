@@ -65,6 +65,38 @@ void writeToTimingJSON(double timing, char* fileOutputLocation){
     }
 }
 
+double ** getKernel(cJSON* config, int *kernelSize){
+    cJSON* kernelJSON = cJSON_GetObjectItem(config, "kernel");
+    int ks = cJSON_GetArraySize(kernelJSON);
+    *kernelSize = ks;
+
+
+
+    double **kernel = (double **)malloc(ks * sizeof(double *));
+    for (int r = 0; r < ks; r++){
+        kernel[r] = (double *)malloc(ks * sizeof(double));
+         cJSON* arrayRow = cJSON_GetArrayItem(kernelJSON, r);
+        for(int c = 0; c < ks; c++){
+           cJSON* arrayColItem = cJSON_GetArrayItem(arrayRow, c);
+           kernel[r][c] = cJSON_GetNumberValue(arrayColItem);
+
+        }
+
+
+    }
+
+
+
+
+    kernel[0][0] = 0.0;
+    kernel[ks-1][ks-1] = 1.0;
+
+    return kernel;
+
+
+
+}
+
 int main() {
 
 
@@ -76,6 +108,19 @@ int main() {
     char* fileInputLocation = fileInputJSON->valuestring;
     char* fileOutputLocation = fileOutputJSON->valuestring;
 
+    int kernelSize = -1;
+    double ** kernel = getKernel(configjson, &kernelSize);
+
+    //print the kernel
+    printf("kernel size: %d\n",kernelSize);
+    for(int r = 0; r< kernelSize; r++){
+        for(int c = 0; c< kernelSize; c++){
+            printf("%f \t",kernel[r][c]);
+        }
+        printf("\n");
+    }
+
+
     printf("Copying %s to %s \n",fileInputLocation,fileOutputLocation);
 
 
@@ -84,8 +129,8 @@ int main() {
     //then replace the 100.02 with the seconds it took to perform the kernel convolution
     copyFile(fileInputLocation,fileOutputLocation);
 
-    double[][] kernel
-    double kSize = 3;//5
+//    double[][] kernel
+//    double kSize = 3;//5
 
     //replace the .02 with the actual timing(its a double (seconds))
     writeToTimingJSON(100.02, fileOutputLocation);

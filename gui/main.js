@@ -207,7 +207,7 @@ function readKernelFromGUI(){
     for(let r = 0; r < kernel.length; r++){
         for(let c = 0; c< kernel.length; c++){
             let kId = ks + "row" + (r+1) + "col" + (c+1);
-             kernel[r][c] = document.getElementById(kId).value;
+             kernel[r][c] = Number(document.getElementById(kId).value);
         }
     }
 
