@@ -33,11 +33,15 @@ function writeJSON(fileName, object, cb){
     });
 }
 
-function setConfigKernel(){
+function setConfigKernel(cb){
     loadJSON("config.json", (data)=>{
         data.kernel = kernel;
         writeJSON("config.json",data, ()=>{
             state.kernelReady = true;
+            if(cb){
+                cb()
+            }
+
         });
     });
 }
@@ -103,6 +107,7 @@ function copyImageFile(imagePath){
 
                 // document.getElementById("leftContainerInstruction").style.display = "none";
                 let leftImageContainer = document.getElementById("leftImageContainer")
+
                 leftImageContainer.innerHTML = "<img src='" + newImagePath + "'>"
 
                 leftImageContainer.style.display = "flex";
@@ -360,6 +365,7 @@ function displayResults(OMPTiming,pythonTiming){
 
 
                 let rightImageContainer = document.getElementById("rightImageContainer")
+                rightImageContainer.innerHTL = "";
                 rightImageContainer.innerHTML = "<img src='" + fastestTiming.fileOutputLocation + "'>"
                 rightImageContainer.style.display = "flex";
 
@@ -403,48 +409,52 @@ function getAndDisplayResults(){
 }
 
 function performFilter(){
-    setConfigKernel();
-    if(!state.kernelReady || !state.numThreadsReady || !state.imageReady){
-        console.log("not ready to perform filter" ,state);
-        return;
-    }
+    setConfigKernel(()=>{
 
-    clearOldTimingData();
-
-    const pythonChild = spawn("python",[pythonScript]);
-    const openMPChild = spawn(openMPExecutable);
-    let pythonDone = false;
-    let openMPDone = false;
-
-    pythonChild.stdout.on('data', (data) => {
-        console.log(`python stdout: ${data}`);
-    });
-    pythonChild.stderr.on('data', (data) => {
-        console.log(`python stderr: ${data}`);
-    });
-    openMPChild.stdout.on('data', (data) => {
-        console.log(`openMP stdout: ${data}`);
-    });
-    openMPChild.stderr.on('data', (data) => {
-        console.log(`openMP stderr: ${data}`);
-    });
-
-
-    pythonChild.on('close', (code) => {
-        console.log(`Python process exited with code ${code}`);
-        pythonDone = true;
-        if(openMPDone && pythonDone){
-            getAndDisplayResults();
+        if(!state.kernelReady || !state.numThreadsReady || !state.imageReady){
+            console.log("not ready to perform filter" ,state);
+            return;
         }
+
+        clearOldTimingData();
+
+        const pythonChild = spawn("python",[pythonScript]);
+        const openMPChild = spawn(openMPExecutable);
+        let pythonDone = false;
+        let openMPDone = false;
+
+        pythonChild.stdout.on('data', (data) => {
+            console.log(`python stdout: ${data}`);
+        });
+        pythonChild.stderr.on('data', (data) => {
+            console.log(`python stderr: ${data}`);
+        });
+        openMPChild.stdout.on('data', (data) => {
+            console.log(`openMP stdout: ${data}`);
+        });
+        openMPChild.stderr.on('data', (data) => {
+            console.log(`openMP stderr: ${data}`);
+        });
+
+
+        pythonChild.on('close', (code) => {
+            console.log(`Python process exited with code ${code}`);
+            pythonDone = true;
+            if(openMPDone && pythonDone){
+                getAndDisplayResults();
+            }
+        });
+
+        openMPChild.on('close', (code) => {
+            console.log(`openMP process exited with code ${code}`);
+            openMPDone = true;
+            if(openMPDone && pythonDone){
+                getAndDisplayResults();
+            }
+        });
+
     });
 
-    openMPChild.on('close', (code) => {
-        console.log(`openMP process exited with code ${code}`);
-        openMPDone = true;
-        if(openMPDone && pythonDone){
-            getAndDisplayResults();
-        }
-    });
 
 
 }
