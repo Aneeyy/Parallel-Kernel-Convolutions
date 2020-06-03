@@ -2,6 +2,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
+#include <string.h>
+
 #include "cJSON.h"
 #include "time.h"
 
@@ -58,7 +60,7 @@ void ReadImage(const char *fileName,byte **pixels, byte ** pixelsOut, int32 *wid
         *pixels = (byte*)malloc(totalSize);
         *pixelsOut = (byte*)malloc(totalSize);
 
-        int i = 0;
+        unsigned int i = 0;
         byte *currentRowPointer = *pixels+((*height-1)*unpaddedRowSize);
         for (i = 0; i < *height; i++) {
             fseek(imageFile, dataOffset+(i*paddedRowSize), SEEK_SET);
@@ -223,7 +225,7 @@ double ** getKernel(cJSON* config, int *kernelSize){
 
 }
 
-void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* configjson,int nt){
+void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double **kernel, int kernelSize, double *timingData, int shouldSave){
     // FILE *source, *dest;
     // source = fopen(fileInputLocation, "rb");
     // dest = fopen(fileOutputLocation, "wb+");
@@ -235,8 +237,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
     int unPaddedRowSize;
     int upsideDown;
 
-    int kernelSize;
-    double ** kernel = getKernel(configjson, &kernelSize);
+
 
     //print the kernel
     printf("kernel size: %d , num threads:\n",kernelSize);
@@ -255,7 +256,12 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
     ReadImage(fileInputLocation, &pixels,&pixelsOut, &width, &height,&bytesPerPixel, &upsideDown, &unPaddedRowSize);
     printf("unpadded row size %d\n",unPaddedRowSize);
 
-    int pixelSize = 3;
+
+    clock_t start,end;
+    start = clock();
+
+
+//    int pixelSize = 3;
     int pixStart = 0, rowStart=0, kPixStart=0, kRowStart;
 
     int rowSize = width * 3;
@@ -278,11 +284,11 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 //        }
 //    }
 
-    for(int row=0; row<height-1; row++){
+    for(unsigned int row=0; row<height-1; row++){
         rowStart = rowSize * row;
 
 //        printf("row: %d,height: %d, rowStart: %d \n",row,height, rowStart);
-		for(int col=0;col<width;col++){
+		for(unsigned int col=0;col<width;col++){
 		    pixStart = rowStart + col* 3;
 
 		    if( row== 0 || col == 0 || row== height-1 || col== width-1){
@@ -295,7 +301,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 //		        out[(x)*width+(y)][0]=buff[(x)*width+(y)][0];
 //                out[(x)*width+(y)][1]=buff[(x)*width+(y)][1];
 //                out[(x)*width+(y)][2]=buff[(x)*width+(y)][2];
-                
+
 		    }
             else if(kernelSize == 5 && (row== 1 || col == 1 || row== height-2 || col== width-2)){
                 pixelsOut[pixStart + 0] = pixels[pixStart + 0];
@@ -323,12 +329,16 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 
 		}
 	}
-
+    end = clock();
+    *timingData = (double)((end - start) / CLOCKS_PER_SEC);
     printf("done! \n");
 
 
+    if(shouldSave){
+        WriteImage(fileOutputLocation, pixelsOut, width, height, bytesPerPixel, upsideDown);
+    }
 
-    WriteImage(fileOutputLocation, pixelsOut, width, height, bytesPerPixel, upsideDown);
+
     // for(int i=0;i<size;i++){
 	// 	putc(out[i][2],dest);
 	// 	putc(out[i][1],dest);
@@ -339,51 +349,104 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
     // fclose(dest);
     // free(buff);
     free(pixels);
+    free(pixelsOut);
 }
 
-int main() {
-    
+double ** getDummyKernel(int size){
+    if(size != 3 && size != 5){
+        return NULL;
+    }
+    double **kernel = (double **)malloc(size * sizeof(double *));
+    for (int r = 0; r < size; r++){
+        kernel[r] = (double *)malloc(size * sizeof(double));
+        for(int c = 0; c < size; c++){
+           kernel[r][c] = 1.;
+        }
+    }
+    return kernel;
+}
 
-    cJSON *configjson = getConfig();
+int main(int argc, char * argv[]){
+    char* fileInputLocation;
+    char* fileOutputLocation;
+    int numThreads;
+    int kernelSize;
+    double ** kernel;
 
-    cJSON *fileInputJSON = cJSON_GetObjectItem(configjson, "fileInputLocation");
-    cJSON *fileOutputJSON = cJSON_GetObjectItem(configjson, "openMPOutputLocation");
+    int shouldSave, shouldWriteToTiming;
 
-    char* fileInputLocation = fileInputJSON->valuestring;
-    char* fileOutputLocation = fileOutputJSON->valuestring;
+    if(argc > 1){
+        //usage: ./openMP fileInputLocation numThreads fileOutputLocation [3|5]
+        if( argc < 5){
+            fprintf(stderr, "Usage: ./openMP fileInputLocation [fileOutputLocation|-nosave] numThreads [3|5]");
+            return 1;
+        }
+        else{
+            fileInputLocation = argv[1];
+            fileOutputLocation = argv[2];
+            shouldSave = strncmp(argv[2],"-nosave",7);
+            numThreads = atoi(argv[3]);
 
-    //int kernelSize = -1;
-    int numThreads = (int)cJSON_GetNumberValue( cJSON_GetObjectItem(configjson,"numThreads"));
+            kernelSize =atoi(argv[4]);
+
+            kernel = getDummyKernel(kernelSize);
+
+            shouldWriteToTiming = 0;
+
+        }
 
 
 
-//    printf("Copying %s to %s \n",fileInputLocation,fileOutputLocation);
+
+    }
+    else{
+        //load data from config file
+        shouldSave = 1;
+        shouldWriteToTiming = 1;
+        cJSON *configjson = getConfig();
+
+        cJSON *fileInputJSON = cJSON_GetObjectItem(configjson, "fileInputLocation");
+        cJSON *fileOutputJSON = cJSON_GetObjectItem(configjson, "openMPOutputLocation");
+
+        fileInputLocation = fileInputJSON->valuestring;
+        fileOutputLocation = fileOutputJSON->valuestring;
+        numThreads = (int)cJSON_GetNumberValue( cJSON_GetObjectItem(configjson,"numThreads"));
 
 
-    //This copy file function is in place of the filter that has to be written
-    //In the implementation, read image from the input file, and write image to output file
-    //then replace the 100.02 with the seconds it took to perform the kernel convolution
-//     copyFile(fileInputLocation,fileOutputLocation);
-    clock_t start,end;
-    start = clock();
-    performConv(fileInputLocation,fileOutputLocation, configjson, numThreads);
-    end = clock();
-//    double[][] kernel
-//    double kSize = 3;//5
+        kernel = getKernel(configjson, &kernelSize);
 
-    //replace the .02 with the actual timing(its a double (seconds))
-    writeToTimingJSON((double)((end - start) / CLOCKS_PER_SEC), fileOutputLocation);
+    }
+
+    if(kernelSize !=3 && kernelSize != 5){
+        printf("%s\n","Bad Kernel Size, must be either 3 or 5, exiting");
+        return 1;
+    }
+
+
+    if(numThreads < 1){
+        numThreads = 1;
+        printf("%s\n","Lower limit of num threads is 1, using 1 as num threads value");
+    }
+    if(numThreads > 64){
+        numThreads = 64;
+        printf("%s\n","Upper limit of num threads is 64, using 64 as num threads value");
+    }
+
+
+    double timingData;
+
+    performConv(fileInputLocation,fileOutputLocation, numThreads, kernel, kernelSize, &timingData, shouldSave);
+
+    if(shouldWriteToTiming){
+        writeToTimingJSON(timingData, fileOutputLocation);
+    }
+    else{
+        printf("Time: %f", timingData);
+    }
+
+
+
+
+
     return 0;
 }
-
-// int main()
-// {
-//         byte *pixels;
-//         int32 width;
-//         int32 height;
-//         int32 bytesPerPixel;
-//         ReadImage("img.bmp", &pixels, &width, &height,&bytesPerPixel);
-//         WriteImage("img2.bmp", pixels, width, height, bytesPerPixel);
-//         free(pixels);
-//         return 0;
-// }
