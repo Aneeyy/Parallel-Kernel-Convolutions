@@ -18,7 +18,7 @@ if inputFile:
     #In the implementation, read image from the input file, and write image to output file
     #then replace the 100.01 with the seconds it took to perform the kernel convolution
     copyfile(inputFile, fileOutputLocation)
-
+    #kernel
 
     with open('../transferData/pythonTiming.json', "r+") as pf:
         pythonTiming = json.load(pf)

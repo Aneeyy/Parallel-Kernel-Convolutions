@@ -13,13 +13,13 @@
 #define NO_COMPRESION 0
 #define MAX_NUMBER_OF_COLORS 0
 #define ALL_COLORS_REQUIRED 0
- 
+
 typedef unsigned int int32;
 typedef short int16;
 typedef unsigned char byte;
 
-void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,int32 bytesPerPixel);
-void ReadImage(const char *fileName,byte **pixels, int32 *width, int32 *height, int32 *bytesPerPixel);
+void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,int32 bytesPerPixel, int upsideDown);
+void ReadImage(const char *fileName,byte **pixels, int32 *width, int32 *height, int32 *bytesPerPixel, int * upsideDown);
 void copyFile(char* s, char* d){
     FILE *source, *dest;
     int i;
@@ -123,20 +123,22 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,double** kerne
     int32 width;
     int32 height;
     int32 bytesPerPixel;
+    int upsideDown;
+    printf("test %s\n",fileInputLocation);
 
-    ReadImage(fileInputLocation, &pixels, &width, &height,&bytesPerPixel);
 
+    ReadImage(fileInputLocation, &pixels, &width, &height,&bytesPerPixel, &upsideDown);
     // if( source == NULL ) {
 
     //     return;
-    // } 
+    // }
 
     // unsigned char byte[54],colorTable[1024];
 
-    // for(int i=0;i<54;i++){									
-	// 	byte[i] = getc(source);								
+    // for(int i=0;i<54;i++){
+	// 	byte[i] = getc(source);
 	// }
-    // fwrite(byte,sizeof(unsigned char),54,dest);	
+    // fwrite(byte,sizeof(unsigned char),54,dest);
 
     // int height = *(int*)&byte[18];
 	// int width = *(int*)&byte[22];
@@ -156,18 +158,18 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,double** kerne
 	// unsigned long int (*out)[3] = malloc(sizeof(unsigned long int[size][3]));
 
     // for(int i=0;i<size;i++){
-    //     buff[i][2]=getc(source);					
+    //     buff[i][2]=getc(source);
 	// 	buff[i][1]=getc(source);
 	// 	buff[i][0]=getc(source);
 	// }
 
-    // for(int x=1;x<height-1;x++){					
+    // for(int x=1;x<height-1;x++){
 	// 	for(int y=1;y<width-1;y++){
 	// 		float sum0= 0.0;
 	// 		float sum1= 0.0;
 	// 		float sum2= 0.0;
 	// 		for(int i=-1;i<=1;++i){
-	// 			for(int j=-1;j<=1;++j){	
+	// 			for(int j=-1;j<=1;++j){
 	// 				sum0=sum0+(float)kernel[i+1][j+1]*pixels[(x+i)*width+(y+j)][0];
 	// 				sum1=sum1+(float)kernel[i+1][j+1]*pixels[(x+i)*width+(y+j)][1];
 	// 				sum2=sum2+(float)kernel[i+1][j+1]*pixels[(x+i)*width+(y+j)][2];
@@ -178,7 +180,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,double** kerne
 	// 		pixels[(x)*width+(y)][2]=sum2;
 	// 	}
 	// }
-    WriteImage(fileOutputLocation, pixels, width, height, bytesPerPixel);
+    WriteImage(fileOutputLocation, pixels, width, height, bytesPerPixel, upsideDown);
     // for(int i=0;i<size;i++){
 	// 	putc(out[i][2],dest);
 	// 	putc(out[i][1],dest);
@@ -223,7 +225,7 @@ int main() {
     //In the implementation, read image from the input file, and write image to output file
     //then replace the 100.02 with the seconds it took to perform the kernel convolution
     // copyFile(fileInputLocation,fileOutputLocation);
-    
+
 
     performConv(fileInputLocation,fileOutputLocation,kernel,kernelSize);
 
@@ -234,8 +236,8 @@ int main() {
     writeToTimingJSON(100.02, fileOutputLocation);
     return 0;
 }
- 
-void ReadImage(const char *fileName,byte **pixels, int32 *width, int32 *height, int32 *bytesPerPixel)
+
+void ReadImage(const char *fileName,byte **pixels, int32 *width, int32 *height, int32 *bytesPerPixel, int * upsideDown)
 {
         FILE *imageFile = fopen(fileName, "rb");
         int32 dataOffset;
@@ -245,28 +247,40 @@ void ReadImage(const char *fileName,byte **pixels, int32 *width, int32 *height, 
         fread(width, 4, 1, imageFile);
         fseek(imageFile, HEIGHT_OFFSET, SEEK_SET);
         fread(height, 4, 1, imageFile);
+
+        if( (int)*height < 0){
+            printf("lines upside down \n");
+            (*height) *=-1;
+            *upsideDown = 1;
+        }
+        else{
+            *upsideDown = 0;
+        }
         int16 bitsPerPixel;
         fseek(imageFile, BITS_PER_PIXEL_OFFSET, SEEK_SET);
         fread(&bitsPerPixel, 2, 1, imageFile);
         *bytesPerPixel = ((int32)bitsPerPixel) / 8;
- 
+
         int paddedRowSize = (int)(4 * ceil((float)(*width) / 4.0f))*(*bytesPerPixel);
         int unpaddedRowSize = (*width)*(*bytesPerPixel);
         int totalSize = unpaddedRowSize*(*height);
+        printf("size: %d \n",totalSize);
+        printf("Width: %d, Height: %d , ::short %lu \n",*width,*height, sizeof(unsigned short));
+
         *pixels = (byte*)malloc(totalSize);
         int i = 0;
         byte *currentRowPointer = *pixels+((*height-1)*unpaddedRowSize);
         for (i = 0; i < *height; i++)
         {
-                fseek(imageFile, dataOffset+(i*paddedRowSize), SEEK_SET);
+            fseek(imageFile, dataOffset+(i*paddedRowSize), SEEK_SET);
             fread(currentRowPointer, 1, unpaddedRowSize, imageFile);
             currentRowPointer -= unpaddedRowSize;
         }
- 
+
         fclose(imageFile);
 }
- 
-void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,int32 bytesPerPixel)
+
+void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,int32 bytesPerPixel, int upsideDown)
 {
         FILE *outputFile = fopen(fileName, "wb");
         //*****HEADER************//
@@ -280,12 +294,19 @@ void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,in
         fwrite(&reserved, 4, 1, outputFile);
         int32 dataOffset = HEADER_SIZE+INFO_HEADER_SIZE;
         fwrite(&dataOffset, 4, 1, outputFile);
- 
+
         //*******INFO*HEADER******//
         int32 infoHeaderSize = INFO_HEADER_SIZE;
         fwrite(&infoHeaderSize, 4, 1, outputFile);
         fwrite(&width, 4, 1, outputFile);
-        fwrite(&height, 4, 1, outputFile);
+        if(upsideDown){
+            int newHeight = height * -1;
+            fwrite(&newHeight, 4, 1, outputFile);
+        }
+        else{
+            fwrite(&height, 4, 1, outputFile);
+        }
+
         int16 planes = 1; //always 1
         fwrite(&planes, 2, 1, outputFile);
         int16 bitsPerPixel = bytesPerPixel * 8;
@@ -309,11 +330,11 @@ void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,in
         for ( i = 0; i < height; i++)
         {
                 int pixelOffset = ((height - i) - 1)*unpaddedRowSize;
-                fwrite(&pixels[pixelOffset], 1, paddedRowSize, outputFile); 
+                fwrite(&pixels[pixelOffset], 1, paddedRowSize, outputFile);
         }
         fclose(outputFile);
 }
- 
+
 // int main()
 // {
 //         byte *pixels;
