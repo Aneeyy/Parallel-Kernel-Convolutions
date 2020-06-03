@@ -5,7 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
-
+#include <omp.h>
 #include "cJSON.h"
 
 #define MAXBUFLEN 1000000
@@ -352,6 +352,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 		        sum0= 0.0;
                 sum1= 0.0;
                 sum2= 0.0;
+                #pragma omp parallel for private(row,sum0,sum1,sum2,kRowStart, rowStart, kPixStart) num_threads(1)
                 for(int i=kStart;i<=kEnd;i++){
                     kRowStart = rowStart + rowSize*i;
                     for(int j=kStart;j<=kEnd;j++){
@@ -384,7 +385,6 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 	// 	putc(out[i][2],dest);
 	// 	putc(out[i][1],dest);
 	// 	putc(out[i][0],dest);
-
 	// }
     // fclose(source);
     // fclose(dest);
