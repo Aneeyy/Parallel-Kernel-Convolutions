@@ -117,8 +117,8 @@ def main():
     #This copy file function is in place of the filter that has to be written
     #In the implementation, read image from the input file, and write image to output file
     #then replace the 100.01 with the seconds it took to perform the kernel convolution
-    #copyfile(inputFile, fileOutputLocation)
-    time = convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+#     copyfile(inputFile, fileOutputLocation)
+    time = 20.#convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
     print("time: " + str(time))
     #kernel
     if shouldWriteToTiming:

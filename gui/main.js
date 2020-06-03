@@ -441,12 +441,12 @@ function clearResultImage(){
 function displayResults(OMPTiming,pythonTiming){
     let fastestTiming = OMPTiming;
     let using = "OMP"
-    if(pythonTiming.timing < OMPTiming.timing){
+    if(pythonTiming.timing && pythonTiming.timing < OMPTiming.timing){
         fastestTiming = pythonTiming;
         using = "Python"
     }
-
-
+    console.log(using)
+    console.log(fastestTiming)
     Jimp.read(fastestTiming.fileOutputLocation, function (err, image) {
         if (err) {
             console.log(err)
