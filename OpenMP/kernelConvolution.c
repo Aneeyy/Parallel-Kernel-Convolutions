@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include "cJSON.h"
+
 #define MAXBUFLEN 1000000
 #define DATA_OFFSET_OFFSET 0x000A
 #define WIDTH_OFFSET 0x0012
@@ -19,7 +20,7 @@ typedef short int16;
 typedef unsigned char byte;
 
 
-void ReadImage(const char *fileName,byte **pixels, byte ** pixelsOut, int32 *width, int32 *height, int32 *bytesPerPixel, int * upsideDown)
+void ReadImage(const char *fileName,byte **pixels, byte ** pixelsOut, int32 *width, int32 *height, int32 *bytesPerPixel, int * upsideDown, int* unpaddedRowSizeCopy)
 {
         FILE *imageFile = fopen(fileName, "rb");
         int32 dataOffset;
@@ -43,10 +44,14 @@ void ReadImage(const char *fileName,byte **pixels, byte ** pixelsOut, int32 *wid
         fread(&bitsPerPixel, 2, 1, imageFile);
         *bytesPerPixel = ((int32)bitsPerPixel) / 8;
 
-        int paddedRowSize = (int)(4 * ceil((float)(*width) / 4.0f))*(*bytesPerPixel);
+        //int paddedRowSize = (int)(4 * ceil((float)(*width) / 4.0f))*(*bytesPerPixel);
+        int paddedRowSize = (*width*3 + 3) & (~3);
+
+
         int unpaddedRowSize = (*width)*(*bytesPerPixel);
+        *unpaddedRowSizeCopy = unpaddedRowSize;
         int totalSize = unpaddedRowSize*(*height);
-        printf("size: %d, unpaddedrowsize: %d \n",totalSize,unpaddedRowSize);
+        printf("size: %d, unpaddedrowsize: %d paddedrowsize: %d \n",totalSize,unpaddedRowSize,paddedRowSize);
         printf("Width: %d, Height: %d , ::short %lu \n",*width,*height, sizeof(unsigned short));
 
         *pixels = (byte*)malloc(totalSize);
@@ -54,8 +59,7 @@ void ReadImage(const char *fileName,byte **pixels, byte ** pixelsOut, int32 *wid
 
         int i = 0;
         byte *currentRowPointer = *pixels+((*height-1)*unpaddedRowSize);
-        for (i = 0; i < *height; i++)
-        {
+        for (i = 0; i < *height; i++) {
             fseek(imageFile, dataOffset+(i*paddedRowSize), SEEK_SET);
             fread(currentRowPointer, 1, unpaddedRowSize, imageFile);
             currentRowPointer -= unpaddedRowSize;
@@ -71,7 +75,10 @@ void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,in
         const char *BM = "BM";
         fwrite(&BM[0], 1, 1, outputFile);
         fwrite(&BM[1], 1, 1, outputFile);
-        int paddedRowSize = (int)(4 * ceil((float)width/4.0f))*bytesPerPixel;
+        //int paddedRowSize = (int)(4 * ceil((float)width/4.0f))*bytesPerPixel;
+        int paddedRowSize = (width*3 + 3) & (~3);
+
+
         int32 fileSize = paddedRowSize*height + HEADER_SIZE + INFO_HEADER_SIZE;
         fwrite(&fileSize, 4, 1, outputFile);
         int32 reserved = 0x0000;
@@ -111,8 +118,7 @@ void WriteImage(const char *fileName, byte *pixels, int32 width, int32 height,in
         fwrite(&importantColors, 4, 1, outputFile);
         unsigned int i = 0;
         int unpaddedRowSize = width*bytesPerPixel;
-        for ( i = 0; i < height; i++)
-        {
+        for ( i = 0; i < height; i++){
                 int pixelOffset = ((height - i) - 1)*unpaddedRowSize;
                 fwrite(&pixels[pixelOffset], 1, paddedRowSize, outputFile);
         }
@@ -225,6 +231,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
     int32 width;
     int32 height;
     int32 bytesPerPixel;
+    int unPaddedRowSize;
     int upsideDown;
 
     int kernelSize;
@@ -242,15 +249,31 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 
 
 
-    printf("test %f\n",kernel[1][1]);
 
-    ReadImage(fileInputLocation, &pixels,&pixelsOut, &width, &height,&bytesPerPixel, &upsideDown);
+
+    ReadImage(fileInputLocation, &pixels,&pixelsOut, &width, &height,&bytesPerPixel, &upsideDown, &unPaddedRowSize);
+    printf("unpadded row size %d\n",unPaddedRowSize);
 
     int pixelSize = 3;
     int pixStart = 0, rowStart=0, kPixStart=0, kRowStart;
 
     int rowSize = width * 3;
     float sum0 = 0, sum1 = 0, sum2 = 0;
+
+//    for(int p = 0; p < unPaddedRowSize*height; p++){
+//        int rowPos = (p % unPaddedRowSize) / 3;
+//
+//        int nRow = p / unPaddedRowSize;
+//        int nCol = p - nRow*unPaddedRowSize;
+//
+//        if(nRow % 2 == 0){
+//            pixels[p] = 255;
+//        }
+//        else{
+//            pixels[p] = 0;
+//            //pixelsOut[p] = pixels[p];
+//        }
+//    }
 
 
     for(int row=0; row<height-1; row++){
@@ -332,7 +355,7 @@ int main() {
     //This copy file function is in place of the filter that has to be written
     //In the implementation, read image from the input file, and write image to output file
     //then replace the 100.02 with the seconds it took to perform the kernel convolution
-    // copyFile(fileInputLocation,fileOutputLocation);
+//     copyFile(fileInputLocation,fileOutputLocation);
 
 
     performConv(fileInputLocation,fileOutputLocation, configjson);

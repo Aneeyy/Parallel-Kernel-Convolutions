@@ -1,4 +1,4 @@
 {
 	"timing":	0.02,
-	"fileOutputLocation":	"/Users/jacksonwheeler/Documents/Parallel-Kernel-Convolutions/transferData/OMP-profile.bmp"
+	"fileOutputLocation":	"/Users/jacksonwheeler/Documents/Parallel-Kernel-Convolutions/transferData/OMP-TilePlaneInline_fig3.bmp"
 }
