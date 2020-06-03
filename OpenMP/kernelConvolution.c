@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 
 #include "cJSON.h"
-#include "time.h"
 
 #define MAXBUFLEN 1000000
 #define DATA_OFFSET_OFFSET 0x000A
@@ -21,6 +22,21 @@
 typedef unsigned int int32;
 typedef short int16;
 typedef unsigned char byte;
+
+
+struct timeval timer_start(){
+	struct timeval start_time;
+	gettimeofday(&start_time,NULL);
+	return start_time;
+}
+
+// get microseconds
+long timer_end(struct timeval start_time){
+	struct timeval end_time;
+	gettimeofday(&end_time,NULL);
+	long diffInMicros = (end_time.tv_sec - start_time.tv_sec) * (long)1e6 + (end_time.tv_usec - start_time.tv_usec);
+	return diffInMicros;
+}
 
 
 void ReadImage(const char *fileName,byte **pixels, byte ** pixelsOut, int32 *width, int32 *height, int32 *bytesPerPixel, int * upsideDown, int* unpaddedRowSizeCopy)
@@ -289,8 +305,9 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 
 
 
-    clock_t start,end;
-    start = clock();
+
+    struct timeval beforeTime = timer_start();
+
 
 
 //    int pixelSize = 3;
@@ -352,8 +369,9 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 
 		}
 	}
-    end = clock();
-    *timingData = (double)((end - start) / CLOCKS_PER_SEC);
+    long micros = timer_end(beforeTime);
+
+    *timingData =(double)micros / 1.e6;
     printf("done! \n");
 
     printf("should save: %d \n",shouldSave);
