@@ -1,8 +1,7 @@
 default: openMP
 
 openMP: kernelConvolution.c cJSON.c
-	gcc -O3 -Wall -Wextra -o $@ kernelConvolution.c cJSON.c
+	gcc -Wall -Wextra -g -o $@ kernelConvolution.c cJSON.c -lm
 
 clean:
-	-rm -f matmult
-	-rm -f matmult_omp
+	-rm -f openMP
