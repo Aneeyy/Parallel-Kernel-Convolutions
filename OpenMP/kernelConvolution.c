@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include "cJSON.h"
+#include "time.h"
 
 #define MAXBUFLEN 1000000
 #define DATA_OFFSET_OFFSET 0x000A
@@ -222,7 +223,7 @@ double ** getKernel(cJSON* config, int *kernelSize){
 
 }
 
-void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* configjson){
+void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* configjson,int nt){
     // FILE *source, *dest;
     // source = fopen(fileInputLocation, "rb");
     // dest = fopen(fileOutputLocation, "wb+");
@@ -259,7 +260,9 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 
     int rowSize = width * 3;
     float sum0 = 0, sum1 = 0, sum2 = 0;
-
+    int kStart, kEnd;
+    kStart = kernelSize==3 ? -1 : -2;
+    kEnd = kernelSize==3 ? 1 : 2;
 //    for(int p = 0; p < unPaddedRowSize*height; p++){
 //        int rowPos = (p % unPaddedRowSize) / 3;
 //
@@ -275,7 +278,6 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 //        }
 //    }
 
-
     for(int row=0; row<height-1; row++){
         rowStart = rowSize * row;
 
@@ -287,25 +289,31 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 		        pixelsOut[pixStart + 0] = pixels[pixStart + 0];
 		        pixelsOut[pixStart + 1] = pixels[pixStart + 1];
 		        pixelsOut[pixStart + 2] = pixels[pixStart + 2];
-                if(col == 0 || col == width-1){
+                // if(col == 0 || col == width-1){
 //                    printf("edge hit: row %d\n",row);
-                }
+                // }
 //		        out[(x)*width+(y)][0]=buff[(x)*width+(y)][0];
 //                out[(x)*width+(y)][1]=buff[(x)*width+(y)][1];
 //                out[(x)*width+(y)][2]=buff[(x)*width+(y)][2];
-
+                
 		    }
+            else if(kernelSize == 5 && (row== 1 || col == 1 || row== height-2 || col== width-2)){
+                pixelsOut[pixStart + 0] = pixels[pixStart + 0];
+		        pixelsOut[pixStart + 1] = pixels[pixStart + 1];
+		        pixelsOut[pixStart + 2] = pixels[pixStart + 2];
+            }
 		    else{
 		        sum0= 0.0;
                 sum1= 0.0;
                 sum2= 0.0;
-                for(int i=-1;i<=1;i++){
+                for(int i=kStart;i<=kEnd;i++){
                     kRowStart = rowStart + rowSize*i;
-                    for(int j=-1;j<=1;j++){
+                    for(int j=kStart;j<=kEnd;j++){
+
                         kPixStart = kRowStart + col*3 + j*3;
-                        sum0+=(float)kernel[i+1][j+1]*pixels[kPixStart + 0];
-                        sum1+=(float)kernel[i+1][j+1]*pixels[kPixStart + 1];
-                        sum2+=(float)kernel[i+1][j+1]*pixels[kPixStart + 2];
+                        sum0+=(float)kernel[i+kEnd][j+kEnd]*pixels[kPixStart + 0];
+                        sum1+=(float)kernel[i+kEnd][j+kEnd]*pixels[kPixStart + 1];
+                        sum2+=(float)kernel[i+kEnd][j+kEnd]*pixels[kPixStart + 2];
                     }
                 }
                 pixelsOut[pixStart + 0] = sum0;
@@ -334,7 +342,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation, cJSON* config
 }
 
 int main() {
-
+    
 
     cJSON *configjson = getConfig();
 
@@ -356,15 +364,15 @@ int main() {
     //In the implementation, read image from the input file, and write image to output file
     //then replace the 100.02 with the seconds it took to perform the kernel convolution
 //     copyFile(fileInputLocation,fileOutputLocation);
-
-
-    performConv(fileInputLocation,fileOutputLocation, configjson);
-
+    clock_t start,end;
+    start = clock();
+    performConv(fileInputLocation,fileOutputLocation, configjson, numThreads);
+    end = clock();
 //    double[][] kernel
 //    double kSize = 3;//5
 
     //replace the .02 with the actual timing(its a double (seconds))
-    writeToTimingJSON(0.02, fileOutputLocation);
+    writeToTimingJSON((double)((end - start) / CLOCKS_PER_SEC), fileOutputLocation);
     return 0;
 }
 
