@@ -333,7 +333,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
     *timingData = (double)((end - start) / CLOCKS_PER_SEC);
     printf("done! \n");
 
-
+    printf("should save: %d \n",shouldSave);
     if(shouldSave){
         WriteImage(fileOutputLocation, pixelsOut, width, height, bytesPerPixel, upsideDown);
     }
@@ -385,6 +385,8 @@ int main(int argc, char * argv[]){
             fileInputLocation = argv[1];
             fileOutputLocation = argv[2];
             shouldSave = strncmp(argv[2],"-nosave",7);
+            printf("shouldSave:  %d\n",shouldSave);
+
             numThreads = atoi(argv[3]);
 
             kernelSize =atoi(argv[4]);
