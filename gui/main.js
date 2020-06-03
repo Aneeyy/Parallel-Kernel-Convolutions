@@ -9,7 +9,12 @@ const openMPExecutable = "../OpenMP/openMP"
 
 let kernel = null;
 let numThreads = 1;
-let state = {"imageReady":false,"kernelReady":false, "numThreadsReady": false}
+
+let imagePaths = {"newImagePathBMP":"","newImagePathBase":"","openMPPath":"","pythonPath":"","oldImagePathPNG":"","ready":false,"locked":false};
+
+
+let oldResultFileLocation = "";
+
 
 let transferDataDirectory = app.getAppPath()
 transferDataDirectory = transferDataDirectory.substr(0,transferDataDirectory.length-4)
@@ -18,6 +23,7 @@ transferDataDirectory += "/transferData"
 function loadJSON(fileName, cb){
     fs.readFile(path.join(transferDataDirectory,fileName), (err, data) => {
         if (err) throw err;
+
         cb(JSON.parse(data));
     });
 }
@@ -29,69 +35,56 @@ function writeJSON(fileName, object, cb){
             cb();
         }
 
-
     });
 }
 
-function setConfigKernel(cb){
+
+function validateConfigData(){
+    numThreads = makeValidThreadNum(numThreads);
+    return (imagePaths.ready && (kernel.length === 3 || kernel.length === 5) )
+
+}
+function setConfigData(cb){
     loadJSON("config.json", (data)=>{
-        data.kernel = kernel;
-        writeJSON("config.json",data, ()=>{
-            state.kernelReady = true;
-            if(cb){
-                cb()
-            }
 
-        });
+        if(validateConfigData()){
+            data.kernel = kernel;
+            data.numThreads = numThreads;
+            data.openMPOutputLocation = imagePaths.openMPPath;
+            data.pythonOutputLocation = imagePaths.pythonPath;
+            data.fileInputLocation = imagePaths.newImagePathBMP;
+            data.greyScale = document.getElementById("greyScaleInput").checked;
+
+            writeJSON("config.json",data, ()=>{
+                cb(true)
+
+            });
+        }
+        else{
+            cb(false);
+        }
     });
 }
 
 
-function setConfigInputFile(path,openMPPath,pythonPath){
-    loadJSON("config.json", (data)=>{
-        data.fileInputLocation = path;
-        data.openMPOutputLocation = openMPPath;
-        data.pythonOutputLocation = pythonPath;
-        writeJSON("config.json",data, ()=>{
-            state.imageReady = true;
-        });
-    });
-}
-function setConfigNumThreads(nt){
-    loadJSON("config.json", (data)=>{
-        data.numThreads = nt;
-        writeJSON("config.json",data, ()=>{
-             state.numThreadsReady = true;
-        });
-    });
-}
-function makeValidThreadNum(nt){
-    if(!nt || nt < 0){
-        return 1;
-    }
-    if(nt > 64){
-        nt = 64;
-    }
-    return nt;
-}
-function updateNumThreads(){
-    let threadSelector = document.getElementById("numThreadsInput")
-    let nt = Number(threadSelector.value);
-    nt = makeValidThreadNum(nt)
-    threadSelector.value = nt;
-    setConfigNumThreads(nt);
 
-}
 function copyImageFile(imagePath){
+    if(imagePaths.locked){
+        console.log("still processing, image uploading is locked")
+        return;
+    }
     clearOldImageFiles();
 
     let oldName = path.basename(imagePath);
     let ext = path.extname(imagePath);
     let newName = oldName.substring(0,oldName.length-ext.length) + ".bmp";
-    console.log("new name: " + newName);
+    let newResultName = oldName.substring(0,oldName.length-ext.length) + "-" + makeRandomId() +  ".png";
+
 
     let newImagePath = path.join(transferDataDirectory,oldName);
     let newImagePathBMP = path.join(transferDataDirectory,newName);
+    let newImagePathBase = path.join(transferDataDirectory, oldName.substring(0,oldName.length-ext.length));
+
     let openMPPath = path.join(transferDataDirectory,"OMP-"+newName);
     let pythonPath = path.join(transferDataDirectory,"python-"+newName);
     console.log("new Image path: ",newImagePath);
@@ -113,7 +106,12 @@ function copyImageFile(imagePath){
                 leftImageContainer.style.display = "flex";
 
                 image.write(newImagePathBMP,()=>{
-                    setConfigInputFile(newImagePathBMP,openMPPath,pythonPath);
+                    imagePaths.newImagePathBMP = newImagePathBMP;
+                    imagePaths.newImagePathBase = newImagePathBase;
+                    imagePaths.openMPPath = openMPPath;
+                    imagePaths.pythonPath = pythonPath;
+                    imagePaths.ready = true;
+                    // setConfigInputFile(newImagePathBMP,openMPPath,pythonPath);
 
                 })
 
@@ -156,8 +154,8 @@ function openFileSelectDialog(){
 }
 
 function clearOldImageFiles(){
-    state.imageReady = false;
-
+    imagePaths.ready = false;
+    imagePaths.oldImagePathPNG = "";
     fs.readdir(transferDataDirectory, (err, files) => {
         if (err) throw err;
 
@@ -172,6 +170,21 @@ function clearOldImageFiles(){
         }
     });
 }
+
+function deleteFile(name,cb){
+    if(name.length > 0){
+        fs.unlink(name, err => {
+            if (err) throw err;
+            oldResultFileLocation = "";
+            cb();
+        });
+    }
+    else{
+        if(cb){
+            cb();
+        }
+    }
+}
 function clearOldTimingData(){
     let td = {"timing":null,fileOutputLocation:null};
 
@@ -184,46 +197,36 @@ function clearOldTimingData(){
     writeJSON("pythonTiming.json",td);
 }
 //if no old kernels were used, this will fail
-function loadConfigAndClearImageData(){
-    let config;
-    loadJSON("config.json", (data)=>{
-        config = data;
-        if(validKernel(config.kernel)){
-            kernel = config.kernel;
-            state.kernelReady = true;
-        }
-        else{
-            loadDefaultKernel();
-        }
-        syncKernelToGUI();
+// function loadConfigAndClearImageData(){
+//     // let config = {};
+//     loadJSON("config.json", (data)=>{
+//         config = data;
+//         if(validKernel(config.kernel)){
+//             kernel = config.kernel;
+//             state.kernelReady = true;
+//         }
+//         else{
+//             loadDefaultKernel();
+//         }
+//         syncKernelToGUI();
+//
+//         let nt = makeValidThreadNum(data.numThreads);
+//
+//         setConfigNumThreads(nt);
+//
+//         document.getElementById("numThreadsInput").value = nt;
+//
+//
+//        // config.kernel = kernel;
+//         config.fileInputLocation = null;
+//         writeJSON("config.json",config);
+//     });
+//
+//
+//     return kernel;
+//
+// }
 
-        let nt = makeValidThreadNum(data.numThreads);
-
-        setConfigNumThreads(nt);
-
-        document.getElementById("numThreadsInput").value = nt;
-
-
-       // config.kernel = kernel;
-        config.fileInputLocation = null;
-        writeJSON("config.json",config);
-    });
-
-
-    return kernel;
-
-}
-
-function loadDefaultKernel(){
-    kernel = [
-        [0,0,0],
-        [0,1,0],
-        [0,0,0]
-    ]
-    setConfigKernel();
-
-    syncKernelToGUI();
-}
 function createBlankKernel(size){
     let kernel = []
     for(let r = 0; r < size; r++){
@@ -270,12 +273,26 @@ function syncKernelToGUI(){
         ks += "5";
     }
 
+
     for(let r = 0; r < kernel.length; r++){
         for(let c = 0; c< kernel.length; c++){
             let kId = ks + "row" + (r+1) + "col" + (c+1);
             document.getElementById(kId).value = kernel[r][c];
         }
     }
+    if(kernel.length === 3){
+        document.getElementById("threeKernel").style.display = "flex";
+        document.getElementById("fiveKernel").style.display = "none";
+        document.getElementById("kernelSizeSelector").selectedIndex = 0;
+
+    }
+    else{
+        document.getElementById("threeKernel").style.display = "none";
+        document.getElementById("fiveKernel").style.display = "flex";
+        document.getElementById("kernelSizeSelector").selectedIndex = 1;
+    }
+
+
 
 }
 function readKernelFromGUI(){
@@ -305,7 +322,23 @@ document.querySelectorAll('.kInput').forEach(item => {
     })
 })
 
+function makeValidThreadNum(nt){
+    if(!nt || nt < 0){
+        return 1;
+    }
+    if(nt > 64){
+        nt = 64;
+    }
+    return nt;
+}
+function updateNumThreads(){
+    let threadSelector = document.getElementById("numThreadsInput")
+    let nt = Number(threadSelector.value);
+    nt = makeValidThreadNum(nt)
+    threadSelector.value = nt;
+    numThreads = nt;
 
+}
 function changeKernelSize(){
     let selector = document.getElementById("kernelSizeSelector");
     if(selector.value === "3"){
@@ -317,14 +350,10 @@ function changeKernelSize(){
                 }
             }
             kernel = newKernel;
-            syncKernelToGUI();
+
         }
-        document.getElementById("fiveKernel").style.display = "none";
-        document.getElementById("threeKernel").style.display = "flex";
-
-
     }
-    else{
+    else if(selector.value === "5"){
         if(kernel.length !== 5){
             let newKernel = createBlankKernel(5);
             for(let r = 0; r < 3; r++){
@@ -333,12 +362,76 @@ function changeKernelSize(){
                 }
             }
             kernel = newKernel;
-            syncKernelToGUI();
+
         }
-        document.getElementById("threeKernel").style.display = "none";
-        document.getElementById("fiveKernel").style.display = "flex";
 
     }
+
+    syncKernelToGUI();
+
+}
+function setKernelPreset(){
+    let selector = document.getElementById("kernelPresetSelector");
+    if(selector.value === "g3"){
+        let kg = [[1,2,1],[2,4,2],[1,2,1]]
+        for(let kr = 0; kr < 3; kr++){
+            for(let kc = 0; kc < 3; kc++) {
+                kg[kr][kc] /= 16;
+            }
+        }
+        kernel = kg;
+        document.getElementById("greyScaleInput").checked = false;
+
+    }
+    else if(selector.value === "g5"){
+        let kg = [[1,4,6,4,1],[4,16,24,16,4],[6,24,36,24,6],[4,16,24,16,4],[1,4,6,4,1]]
+        for(let kr = 0; kr < 5; kr++){
+            for(let kc = 0; kc < 5; kc++) {
+                kg[kr][kc] /= 256;
+            }
+        }
+        kernel = kg;
+        document.getElementById("greyScaleInput").checked = false;
+    }
+    else if(selector.value === "e3-1"){
+        kernel = [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]]
+        document.getElementById("greyScaleInput").checked = true;
+    }
+    else if(selector.value === "e3-2"){
+        kernel = [[0,1,0],[-1,0,1],[0,-1,0]]
+        document.getElementById("greyScaleInput").checked = true;
+
+    }
+    else if(selector.value === "e3-3"){
+        kernel = [[-1,-1,0],[-1,0,1],[0,1,1]]
+        document.getElementById("greyScaleInput").checked = true;
+
+    }
+    else if(selector.value === "s3"){
+        kernel = [[0,-1,0],[-1,5,-1],[0,-1,0]]
+        document.getElementById("greyScaleInput").checked = false;
+
+    }
+    else if(selector.value === "us5"){
+        let kg = [[1,4,6,4,1],[4,16,24,16,4],[6,24,-476,24,6],[4,16,24,16,4],[1,4,6,4,1]]
+        for(let kr = 0; kr < 5; kr++){
+            for(let kc = 0; kc < 5; kc++) {
+                kg[kr][kc] /= -256;
+            }
+        }
+        kernel = kg;
+        document.getElementById("greyScaleInput").checked = false;
+
+    }
+    else if(selector.value === "em3"){
+        kernel = [[-2,-1,0],[-1,1,1],[0,1,2]]
+        document.getElementById("greyScaleInput").checked = true;
+
+    }
+    syncKernelToGUI();
+
+    selector.selectedIndex = 0;
+
 }
 
 function clearResultImage(){
@@ -359,14 +452,15 @@ function displayResults(OMPTiming,pythonTiming){
             console.log(err)
         }
         else {
-            let newFileLocation = fastestTiming.fileOutputLocation.substring(0,fastestTiming.fileOutputLocation.length-4)
-            newFileLocation += ".png";
-            image.write(newFileLocation, ()=>{
+            imagePaths.oldImagePathPNG = imagePaths.newImagePathBase;//fastestTiming.fileOutputLocation.substring(0,fastestTiming.fileOutputLocation.length-4)
+            imagePaths.oldImagePathPNG += "-" + makeRandomId() + ".png";
+            //oldResultFileLocation = newFileLocation;
+            image.write(imagePaths.oldImagePathPNG, ()=>{
 
 
                 let rightImageContainer = document.getElementById("rightImageContainer")
                 rightImageContainer.innerHTL = "";
-                rightImageContainer.innerHTML = "<img src='" + fastestTiming.fileOutputLocation + "'>"
+                rightImageContainer.innerHTML = "<img src='" + imagePaths.oldImagePathPNG + "'>"
                 rightImageContainer.style.display = "flex";
 
                 document.getElementById("parameters").style.display = "none";
@@ -376,7 +470,8 @@ function displayResults(OMPTiming,pythonTiming){
                 document.getElementById("pythonTiming").innerHTML = "Python Time: " + pythonTiming.timing + "s";
                 //document.getElementById("resultsDiff").innerHTML = "Results Diff: "
                 // document.getElementById("usingImage").innerHTML = "Image From: " + using;
-
+                imagePaths.locked = false;
+                console.log("unlocking image paths", imagePaths)
             })
 
         }
@@ -389,6 +484,7 @@ function displayResults(OMPTiming,pythonTiming){
 
 
 }
+
 
 function getAndDisplayResults(){
     let OMPTiming, pythonTiming;
@@ -407,63 +503,80 @@ function getAndDisplayResults(){
     })
 
 }
-
 function performFilter(){
-    setConfigKernel(()=>{
-
-        if(!state.kernelReady || !state.numThreadsReady || !state.imageReady){
-            console.log("not ready to perform filter" ,state);
-            return;
-        }
-
-        clearOldTimingData();
-
-        const pythonChild = spawn("python",[pythonScript]);
-        const openMPChild = spawn(openMPExecutable);
-        let pythonDone = false;
-        let openMPDone = false;
-
-        pythonChild.stdout.on('data', (data) => {
-            console.log(`python stdout: ${data}`);
-        });
-        pythonChild.stderr.on('data', (data) => {
-            console.log(`python stderr: ${data}`);
-        });
-        openMPChild.stdout.on('data', (data) => {
-            console.log(`openMP stdout: ${data}`);
-        });
-        openMPChild.stderr.on('data', (data) => {
-            console.log(`openMP stderr: ${data}`);
-        });
 
 
-        pythonChild.on('close', (code) => {
-            console.log(`Python process exited with code ${code}`);
-            pythonDone = true;
-            if(openMPDone && pythonDone){
-                getAndDisplayResults();
+    deleteFile(imagePaths.oldImagePathPNG, ()=>{
+
+
+        setConfigData((ready)=>{
+
+            if(!ready){
+                console.log("not ready to perform filter")
+                return;
             }
-        });
+            imagePaths.locked = true;
+            console.log("locking image paths", imagePaths)
 
-        openMPChild.on('close', (code) => {
-            console.log(`openMP process exited with code ${code}`);
-            openMPDone = true;
-            if(openMPDone && pythonDone){
-                getAndDisplayResults();
-            }
+            clearOldTimingData();
+
+            const pythonChild = spawn("python",[pythonScript]);
+            const openMPChild = spawn(openMPExecutable);
+            let pythonDone = false;
+            let openMPDone = false;
+
+            pythonChild.stdout.on('data', (data) => {
+                console.log(`python stdout: ${data}`);
+            });
+            pythonChild.stderr.on('data', (data) => {
+                console.log(`python stderr: ${data}`);
+            });
+            openMPChild.stdout.on('data', (data) => {
+                console.log(`openMP stdout: ${data}`);
+            });
+            openMPChild.stderr.on('data', (data) => {
+                console.log(`openMP stderr: ${data}`);
+            });
+
+
+            pythonChild.on('close', (code) => {
+                console.log(`Python process exited with code ${code}`);
+                pythonDone = true;
+                if(openMPDone && pythonDone){
+                    getAndDisplayResults();
+                }
+            });
+
+            openMPChild.on('close', (code) => {
+                console.log(`openMP process exited with code ${code}`);
+                openMPDone = true;
+                if(openMPDone && pythonDone){
+                    getAndDisplayResults();
+                }
+            });
+
         });
 
     });
 
-
-
 }
 
+function loadDefaultKernel(){
+    kernel = [
+        [0,0,0],
+        [0,1,0],
+        [0,0,0]
+    ]
+
+    syncKernelToGUI();
+}
 
 function main(){
     clearOldImageFiles();
     clearOldTimingData();
-    loadConfigAndClearImageData()
+    loadDefaultKernel();
+
+    // loadConfigAndClearImageData()
 
 
 
@@ -514,4 +627,14 @@ dragMask.addEventListener('drop', preventDefaults, false)
 function preventDefaults (e) {
   e.preventDefault()
   e.stopPropagation()
+}
+
+function makeRandomId(){
+    let idchars = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','1','2','3','4','5','6','7','8','9','0']
+    let str = ""
+    let strSize = 5
+    for(let i = 0; i < strSize; i++){
+        str += idchars[Math.floor(Math.random()*idchars.length)];
+    }
+    return str;
 }

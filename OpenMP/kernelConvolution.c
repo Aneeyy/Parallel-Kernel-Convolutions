@@ -225,7 +225,7 @@ double ** getKernel(cJSON* config, int *kernelSize){
 
 }
 
-void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double **kernel, int kernelSize, double *timingData, int shouldSave){
+void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double **kernel, int kernelSize, double *timingData, int shouldSave, int makeGreyScale){
     // FILE *source, *dest;
     // source = fopen(fileInputLocation, "rb");
     // dest = fopen(fileOutputLocation, "wb+");
@@ -257,11 +257,6 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
     printf("unpadded row size %d\n",unPaddedRowSize);
 
 
-    clock_t start,end;
-    start = clock();
-
-
-//    int pixelSize = 3;
     int pixStart = 0, rowStart=0, kPixStart=0, kRowStart;
 
     int rowSize = width * 3;
@@ -269,6 +264,37 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
     int kStart, kEnd;
     kStart = kernelSize==3 ? -1 : -2;
     kEnd = kernelSize==3 ? 1 : 2;
+
+
+    //preprocessing step, leave out of timing
+    if(makeGreyScale){
+        for(unsigned int row=0; row<height; row++){
+            rowStart = rowSize * row;
+            for(unsigned int col=0;col<width;col++){
+                pixStart = rowStart + col* 3;
+
+                sum0 = pixels[pixStart + 0];
+                sum0 += pixels[pixStart + 1];
+                sum0 += pixels[pixStart + 2];
+                sum0 /= 3;
+                pixels[pixStart + 0] = sum0;
+                pixels[pixStart + 1] = sum0;
+                pixels[pixStart + 2] = sum0;
+            }
+		}
+
+
+
+    }
+
+
+
+    clock_t start,end;
+    start = clock();
+
+
+//    int pixelSize = 3;
+
 //    for(int p = 0; p < unPaddedRowSize*height; p++){
 //        int rowPos = (p % unPaddedRowSize) / 3;
 //
@@ -284,7 +310,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 //        }
 //    }
 
-    for(unsigned int row=0; row<height-1; row++){
+    for(unsigned int row=0; row<height; row++){
         rowStart = rowSize * row;
 
 //        printf("row: %d,height: %d, rowStart: %d \n",row,height, rowStart);
@@ -292,15 +318,12 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 		    pixStart = rowStart + col* 3;
 
 		    if( row== 0 || col == 0 || row== height-1 || col== width-1){
-		        pixelsOut[pixStart + 0] = pixels[pixStart + 0];
-		        pixelsOut[pixStart + 1] = pixels[pixStart + 1];
-		        pixelsOut[pixStart + 2] = pixels[pixStart + 2];
-                // if(col == 0 || col == width-1){
-//                    printf("edge hit: row %d\n",row);
-                // }
-//		        out[(x)*width+(y)][0]=buff[(x)*width+(y)][0];
-//                out[(x)*width+(y)][1]=buff[(x)*width+(y)][1];
-//                out[(x)*width+(y)][2]=buff[(x)*width+(y)][2];
+
+                pixelsOut[pixStart + 0] = pixels[pixStart + 0];
+                pixelsOut[pixStart + 1] = pixels[pixStart + 1];
+                pixelsOut[pixStart + 2] = pixels[pixStart + 2];
+
+
 
 		    }
             else if(kernelSize == 5 && (row== 1 || col == 1 || row== height-2 || col== width-2)){
@@ -373,7 +396,7 @@ int main(int argc, char * argv[]){
     int kernelSize;
     double ** kernel;
 
-    int shouldSave, shouldWriteToTiming;
+    int shouldSave = 0, shouldWriteToTiming = 0, makeGreyScale = 0;
 
     if(argc > 1){
         //usage: ./openMP fileInputLocation numThreads fileOutputLocation [3|5]
@@ -389,7 +412,7 @@ int main(int argc, char * argv[]){
 
             numThreads = atoi(argv[3]);
 
-            kernelSize =atoi(argv[4]);
+            kernelSize = atoi(argv[4]);
 
             kernel = getDummyKernel(kernelSize);
 
@@ -409,12 +432,16 @@ int main(int argc, char * argv[]){
 
         cJSON *fileInputJSON = cJSON_GetObjectItem(configjson, "fileInputLocation");
         cJSON *fileOutputJSON = cJSON_GetObjectItem(configjson, "openMPOutputLocation");
+        cJSON *greyScaleBoolJSON = cJSON_GetObjectItem(configjson,"greyScale");
 
         fileInputLocation = fileInputJSON->valuestring;
         fileOutputLocation = fileOutputJSON->valuestring;
+
         numThreads = (int)cJSON_GetNumberValue( cJSON_GetObjectItem(configjson,"numThreads"));
 
-
+        makeGreyScale = cJSON_IsTrue(greyScaleBoolJSON);
+//        makeGreyScale = strncmp(greyScaleBoolJSON->valuestring,"true",4);
+        printf("grey scale:  %d\n",makeGreyScale);
         kernel = getKernel(configjson, &kernelSize);
 
     }
@@ -437,7 +464,7 @@ int main(int argc, char * argv[]){
 
     double timingData;
 
-    performConv(fileInputLocation,fileOutputLocation, numThreads, kernel, kernelSize, &timingData, shouldSave);
+    performConv(fileInputLocation,fileOutputLocation, numThreads, kernel, kernelSize, &timingData, shouldSave, makeGreyScale);
 
     if(shouldWriteToTiming){
         writeToTimingJSON(timingData, fileOutputLocation);
@@ -445,9 +472,6 @@ int main(int argc, char * argv[]){
     else{
         printf("Time: %f", timingData);
     }
-
-
-
 
 
     return 0;

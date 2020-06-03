@@ -34,6 +34,18 @@
                         <option value="3">3X3 Kernel</option>
                         <option value="5">5X5 Kernel</option>
                     </select>
+                    <select id="kernelPresetSelector" onchange="setKernelPreset()">
+                        <option value="" selected="selected">Presets</option>
+                        <option value="g3">Gaussian Blur 3x3</option>
+                        <option value="g5">Gaussian Blur 5x5</option>
+                        <option value="e3-1">Edge Detect 1 3x3</option>
+                        <option value="e3-2">Edge Detect 2 3x3</option>
+                        <option value="e3-3">Edge Detect 3 3x3</option>
+                        <option value="s3">Sharpen 3x3</option>
+                        <option value="us5">Unsharp Mask 5x5</option>
+                        <option value="em3">Emboss 3x3</option>
+
+                    </select>
                 </div>
                 <div class="KernelContainer">
 
@@ -99,7 +111,13 @@
                 <div class="NumThreadsSelectorContainer">
                     <div class="NumThreadsSelector">
                         <div class="NumThreadsLabel"><p>Num Threads(1-64): </p></div>
-                        <input id="numThreadsInput" class="NumThreadsInput" value="1" onchange="updateNumThreads()"  class="" type="number">
+                        <input id="numThreadsInput" class="NumThreadsInput" value="1" onchange="updateNumThreads()"  type="number">
+
+                    </div>
+                    <div class="NumThreadsSelector">
+
+                        <div class="GreyScaleLabel"><p>Make GreyScale: </p><input id="greyScaleInput" class="NumThreadsInput"  type="checkbox"></div>
+
                     </div>
 
                 </div>
@@ -132,7 +150,9 @@
         </div>
 
     </div>
-
+    <div class="Footer">
+        <p class="Authors">Jackson Wheeler &nbsp;&nbsp;|&nbsp;&nbsp; Ryan Cain &nbsp;&nbsp;|&nbsp;&nbsp; Sharan Singh</p>
+    </div>
 </body>
     <script src="main.js"></script>
 
