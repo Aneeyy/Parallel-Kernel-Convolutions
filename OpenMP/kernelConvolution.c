@@ -256,7 +256,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 
 
     //print the kernel
-    printf("kernel size: %d , num threads:\n",kernelSize);
+    printf("kernel size: %d , num threads %d:\n",kernelSize, nt);
     for(int r = 0; r< kernelSize; r++){
         for(int c = 0; c< kernelSize; c++){
             printf("%f \t",kernel[r][c]);
@@ -326,7 +326,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 //            //pixelsOut[p] = pixels[p];
 //        }
 //    }
-
+    #pragma omp parallel for private(sum0,sum1,sum2,kRowStart, rowStart, kPixStart) num_threads(nt) schedule(static,height/nt + 1)
     for(unsigned int row=0; row<height; row++){
         rowStart = rowSize * row;
 
@@ -352,7 +352,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 		        sum0= 0.0;
                 sum1= 0.0;
                 sum2= 0.0;
-                #pragma omp parallel for private(row,sum0,sum1,sum2,kRowStart, rowStart, kPixStart) num_threads(1)
+
                 for(int i=kStart;i<=kEnd;i++){
                     kRowStart = rowStart + rowSize*i;
                     for(int j=kStart;j<=kEnd;j++){
@@ -488,7 +488,7 @@ int main(int argc, char * argv[]){
         writeToTimingJSON(timingData, fileOutputLocation);
     }
     else{
-        printf("Time: %f", timingData);
+        printf("Time: %f\n", timingData);
     }
 
 
