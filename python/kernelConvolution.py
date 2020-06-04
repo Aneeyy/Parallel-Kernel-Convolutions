@@ -18,6 +18,8 @@ from multiprocessing import set_start_method
 
 def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
     input_image = Image.open(inputFile)
+    if makeGreyScale:
+        input_image=input_image.convert('LA')
     # input_pixels = input_image
     # input_image = misc.imread(inputFile, False, mode='L')
     # input_pixels = input_image.load()
