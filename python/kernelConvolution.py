@@ -9,7 +9,12 @@ import numpy as np
 from PIL import Image
 from scipy import signal as sg
 
-import multiprocessing
+from multiprocessing.pool import ThreadPool as Pool
+from functools import partial
+
+# from joblib import Parallel, delayed
+from multiprocessing import set_start_method
+
 
 def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
     input_image = Image.open(inputFile)
@@ -80,18 +85,89 @@ def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, mak
     return elapsed
 
 def split(imageSlices,input_image):
-    sliceHeight = ((input_image.shape)[0]) / imageSlices
-    sliceWidth = ((input_image.shape)[0]) / imageSlices
-    print(sliceHeight)
-    print(sliceWidth)
+    # sliceHeightSize = ((input_image.shape)[0]) / imageSlices
+    # sliceWidthSize = ((input_image.shape)[1]) / imageSlices
+    # startX = 0
+    # endX = sliceWidthSize
+    # startY = 0
+    # endY = sliceHeightSize
+    # imagePieces = []
+    # w = 0
+    # print(imageSlices)
+    # for i in range (1,imageSlices):
+    #     for j in range (0,imageSlices+2):
+    #         imagePieces.append(input_image[int(startX):int(endX),int(startY):int(endY),:])
+    #         startY = endY
+    #         endY += sliceHeightSize
+    #         print(len(imagePieces))
+    #     startY = 0
+    #     endY = sliceHeightSize
+    #     startX = endX
+    #     endX += sliceWidthSize
+    imagePieces = np.array_split(input_image,imageSlices)
+
+    #IF YOU WANT TO SPLIT THE IMG BETTER, DO SO HERE
+
+
+    # print(len(imagePieces))
     return imagePieces
+
+def join (imageSlices, input_image,height,width):
+    # sliceWidthSize = height / imageSlices
+    # sliceHeightSize = width / imageSlices
+    # startX = 0
+    # endX = sliceWidthSize
+    # startY = 0
+    # endY = sliceHeightSize
+    # pos = 0
+    # t = np.zeros((height, width))
+    # for i in range(1, imageSlices):
+    #     for j in range(0, imageSlices + 2):
+    #         t[int(startX):int(endX), int(startY):int(endY),:] = input_image[pos]
+    #         pos = pos + 1
+    #         startY = endY
+    #         endY += sliceHeightSize
+    #     startY = 0
+    #     endY = sliceHeightSize
+    #     startX = endX
+    #     endX += sliceWidthSize
+    # out = [ind[0] for ind in input_image]
+    # print(len(input_image))
+    out = input_image[0]
+
+    # IF YOU TRIED TO SPLIT THE DATA BETTER, SOW IT HERE
+    for x in range(1,len(input_image)):
+        out = np.concatenate((np.asarray(out), np.asarray(input_image[x])),axis=1)
+    out = out.transpose(1,2,0)
+
+
+
+    # print(out)
+    return out
+
+def f(img,kernel):
+    output_image = []
+    # print(img.shape)
+    for index in range(3):
+        piece = sg.convolve2d(img[:,:,index],np.asarray(kernel),boundary='symm', mode='same')
+        output_image.append(piece)
+        # print("im working")
+    return output_image
 
 def convoluteFileParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
 	# pool = mp.Pool(processes=numThreads)
     imageSlices = numThreads
-    start_time = timeit.default_timer()
     input_image = Image.open(inputFile)
+
+    if makeGreyScale:
+        input_image = input_image.convert('LA')
+
     input_image = np.asarray(input_image)
+    height = input_image.shape[0]
+    width = input_image.shape[1]
+
+
+    start_time = timeit.default_timer()
 
     # if(makeGreyScale):
     #     for row in range((input_image.shape)[0]):
@@ -109,15 +185,21 @@ def convoluteFileParallel(inputFile, fileOutputLocation,kernel,numThreads, makeG
     
     imagePieces = split(imageSlices,input_image)
     output_image = []
+    pool = Pool(processes=numThreads)
+    conv_partial = partial(f,kernel=kernel)
+    
     start = timeit.default_timer()
-    for index in range(3):
-        piece = sg.convolve2d(input_image[:,:,index],np.asarray(kernel),boundary='symm', mode='same')
-        output_image.append(piece)
-    output_image = np.stack(output_image, axis=2).astype("uint8")
+    # slices = Parallel(n_jobs=imageSlices)(delayed(conv_partial)(pieces) for pieces in imagePieces)
+    output_image = pool.map(conv_partial,imagePieces)
+    pool.close() 
+    pool.join()
     elapsed = timeit.default_timer() - start
-    output_image = Image.fromarray(output_image)
-    if shouldSave:
+    output_image = join(imageSlices,output_image,height,width)
+    output_image = Image.fromarray(output_image.astype('uint8'))
+
+    if 1:
         print("saving..")
+        # output_image.convert('RGB')
         output_image.save(fileOutputLocation)
 
     return elapsed
@@ -143,7 +225,11 @@ def main():
     kernel = None
     shouldWriteToTiming = False
     makeGreyScale = False
-
+    # freeze_support()
+    # try:
+    #     set_start_method('spawn')
+    # except RuntimeError:
+    #     pass
     if len(sys.argv) > 1:
         if len(sys.argv) < 5:
             print("Usage: python kernelConvolution.py fileInputLocation [fileOutputLocation|-nosave] numThreads [3|5]")
@@ -177,7 +263,9 @@ def main():
     #In the implementation, read image from the input file, and write image to output file
     #then replace the 100.01 with the seconds it took to perform the kernel convolution
 #     copyfile(inputFile, fileOutputLocation)
-    time = convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+    # time = convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+    time = convoluteFileParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+
     print("time: " + str(time))
     #kernel
     if shouldWriteToTiming:
