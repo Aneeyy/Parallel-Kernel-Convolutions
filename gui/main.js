@@ -393,10 +393,31 @@ function setKernelPreset(){
         kernel = kg;
         document.getElementById("greyScaleInput").checked = false;
     }
+    else if(selector.value === "b3"){
+        let kg = [[1,1,1],[1,1,1],[1,1,1]]
+        for(let kr = 0; kr < 3; kr++){
+            for(let kc = 0; kc < 3; kc++) {
+                kg[kr][kc] /= 9;
+            }
+        }
+        kernel = kg;
+        document.getElementById("greyScaleInput").checked = false;
+    }
+    else if(selector.value === "b5"){
+        let kg = [[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]]
+        for(let kr = 0; kr < 5; kr++){
+            for(let kc = 0; kc < 5; kc++) {
+                kg[kr][kc] /= 25;
+            }
+        }
+        kernel = kg;
+        document.getElementById("greyScaleInput").checked = false;
+    }
     else if(selector.value === "e3-1"){
         kernel = [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]]
         document.getElementById("greyScaleInput").checked = true;
     }
+
     else if(selector.value === "e3-2"){
         kernel = [[0,1,0],[-1,0,1],[0,-1,0]]
         document.getElementById("greyScaleInput").checked = true;
@@ -441,12 +462,12 @@ function clearResultImage(){
 function displayResults(OMPTiming,pythonTiming){
     let fastestTiming = OMPTiming;
     let using = "OMP"
-    if(pythonTiming.timing < OMPTiming.timing){
+    if(pythonTiming.timing && pythonTiming.timing < OMPTiming.timing){
         fastestTiming = pythonTiming;
         using = "Python"
     }
-
-
+    console.log(using)
+    console.log(fastestTiming)
     Jimp.read(fastestTiming.fileOutputLocation, function (err, image) {
         if (err) {
             console.log(err)
