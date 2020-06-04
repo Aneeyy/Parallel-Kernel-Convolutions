@@ -8,6 +8,9 @@ from scipy import misc
 import numpy as np
 from PIL import Image
 from scipy import signal as sg
+
+import multiprocessing
+
 def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
     input_image = Image.open(inputFile)
     # input_pixels = input_image
@@ -21,17 +24,17 @@ def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, mak
     # Numpy Code
     input_image = np.asarray(input_image)
     # output_image = np.zeros((input_pixels.shape[0],input_pixels.shape[1],input_pixels.shape[2]))
-
-    if(makeGreyScale):
-        for row in range(input_image.height):
-            #rowStart = input_image.width * row
-            for col in range(input_image.width):
-                pixel = input_pixels[row][col]
-                acc = pixel[0]
-                acc += pixel[1]
-                acc += pixel[2]
-                acc = int(acc/3)
-                input_pixels[row][col] = np.asarray([acc,acc,acc])
+    
+    # if(makeGreyScale):
+    #     for row in range((input_image.shape)[0]):
+    #         #rowStart = input_image.width * row
+    #         for col in range((input_image.shape)[1]):
+    #             pixel = input_image[row][col]
+    #             acc = pixel[0]
+    #             acc += pixel[1]
+    #             acc += pixel[2]
+    #             acc = int(acc/3)
+    #             input_image[row][col] = np.asarray([acc,acc,acc])
                 # pixel[0] = acc
                 # pixel[1] = acc
                 # pixel[2] = acc
@@ -75,9 +78,49 @@ def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, mak
         output_image.save(fileOutputLocation)
 
     return elapsed
-#Parrallel Still have to implement. Super simple once the non parrallel stuff works
-def convoluteFileParallel(inputFile, fileOutputLocation,kernel,numThreads):
-	pool = mp.Pool(processes=numThreads)
+
+def split(imageSlices,input_image):
+    sliceHeight = ((input_image.shape)[0]) / imageSlices
+    sliceWidth = ((input_image.shape)[0]) / imageSlices
+    print(sliceHeight)
+    print(sliceWidth)
+    return imagePieces
+
+def convoluteFileParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
+	# pool = mp.Pool(processes=numThreads)
+    imageSlices = numThreads
+    start_time = timeit.default_timer()
+    input_image = Image.open(inputFile)
+    input_image = np.asarray(input_image)
+
+    # if(makeGreyScale):
+    #     for row in range((input_image.shape)[0]):
+    #         #rowStart = input_image.width * row
+    #         for col in range((input_image.shape)[1]):
+    #             pixel = input_pixels[row][col]
+    #             acc = pixel[0]
+    #             acc += pixel[1]
+    #             acc += pixel[2]
+    #             acc = int(acc/3)
+    #             input_pixels[row][col] = np.asarray([acc,acc,acc])
+                # pixel[0] = acc
+                # pixel[1] = acc
+                # pixel[2] = acc
+    
+    imagePieces = split(imageSlices,input_image)
+    output_image = []
+    start = timeit.default_timer()
+    for index in range(3):
+        piece = sg.convolve2d(input_image[:,:,index],np.asarray(kernel),boundary='symm', mode='same')
+        output_image.append(piece)
+    output_image = np.stack(output_image, axis=2).astype("uint8")
+    elapsed = timeit.default_timer() - start
+    output_image = Image.fromarray(output_image)
+    if shouldSave:
+        print("saving..")
+        output_image.save(fileOutputLocation)
+
+    return elapsed
 
 # def calculateOne(fileIn,row,col):
 # 	#find value
@@ -112,7 +155,7 @@ def main():
             numThreads = sys.argv[3]
             kernelSize = sys.argv[4]
             kernel = getDummyKernel(int(kernelSize))
-            shouldWriteToTiming = False
+            shouldWriteToTiming = True
             makeGreyScale = False # disable this
     else:
         with open('../transferData/config.json') as f:
@@ -134,7 +177,7 @@ def main():
     #In the implementation, read image from the input file, and write image to output file
     #then replace the 100.01 with the seconds it took to perform the kernel convolution
 #     copyfile(inputFile, fileOutputLocation)
-    time = 20.#convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+    time = convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
     print("time: " + str(time))
     #kernel
     if shouldWriteToTiming:
