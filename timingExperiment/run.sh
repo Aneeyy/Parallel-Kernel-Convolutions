@@ -11,7 +11,8 @@
 #SBATCH --mail-user=jwheeler@scu.edu
 
 
-module load SciPy-bundle/2019.03-foss-2019a
+#module load SciPy-bundle/2019.03-foss-2019a
+#pip3 install --user Pillow
 
 export JSLOG=1
 export INWAVE=1
@@ -20,21 +21,22 @@ export OMP_PROC_BIND=spread
 
 echo "["
 WD=/WAVE/users/unix/jwheeler/projectsHome/Parallel-Kernel-Convolutions-master
-source ${WD}/python/virtualenv/bin/activate
+source ${WD}/timingExperiment/venv/bin/activate
 
 for ThreadNum in 1 2 4 8 16 28
   do
-  echo "{ThreadNum: ${ThreadNum},"
-  for ImageNum in {0..99}
+  echo "{'ThreadNum': ${ThreadNum}, 'ImageTimes':["
+  for ImageNum in {0..10}
   do
-    export OMP_NUM_THREADS=$THREADNUM
-    echo "OpenMP:["
+    echo "{'imageNum': ${ImageNum},"
+    export OMP_NUM_THREADS=$ThreadNum
+    echo "'OpenMP':["
     for AttemptOpenMP in {0..5}
     do
       ${WD}/OpenMP/openMP ${WD}/timingExperiment/images/test_${ImageNum}.bmp -nosave ${ThreadNum} 3
       echo ","
     done
-    echo "],Python:["
+    echo "],'Python':["
     for AttemptPython in {0..5}
     do
       python3 ${WD}/python/kernelConvolution.py ${WD}/timingExperiment/images/test_${ImageNum}.bmp -nosave ${ThreadNum} 3
@@ -42,5 +44,6 @@ for ThreadNum in 1 2 4 8 16 28
     done
     echo "]},"
   done
+  echo "]},"
 done
-
+echo "]"

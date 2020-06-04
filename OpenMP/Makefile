@@ -12,5 +12,7 @@ default: openMP
 openMP: kernelConvolution.c cJSON.c
 	${CC} -Wall -Wextra -g -O3 -fopenmp -o $@ kernelConvolution.c cJSON.c -lm
 
+openMPHPC: kernelConvolution.c cJSON.c
+    ${CC} -std=c99 -Wall -Wextra -g -O3 -fopenmp -o $@ kernelConvolution.c cJSON.c -lm
 clean:
 	-rm -f openMP
