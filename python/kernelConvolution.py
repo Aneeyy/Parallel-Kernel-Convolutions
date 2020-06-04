@@ -6,7 +6,7 @@ import timeit
 from shutil import copyfile
 from scipy import misc
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 from scipy import signal as sg
 
 from multiprocessing.pool import ThreadPool as Pool
@@ -20,7 +20,11 @@ from multiprocessing import set_start_method
 def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
     input_image = Image.open(inputFile)
     if makeGreyScale:
-        input_image=input_image.convert('LA')
+        input_image=input_image.convert('L')
+#         gray = ImageOps.grayscale(input_image)
+        input_image = ImageOps.colorize(input_image, (0, 0, 0), (255,255,255))
+
+
     # input_pixels = input_image
     # input_image = misc.imread(inputFile, False, mode='L')
     # input_pixels = input_image.load()
@@ -222,8 +226,12 @@ def convoluteFileParallel(inputFile, fileOutputLocation,kernel,numThreads, makeG
     imageSlices = numThreads
     input_image = Image.open(inputFile)
 
+#     if makeGreyScale:
+#         input_image = input_image.convert('LA')
     if makeGreyScale:
-        input_image = input_image.convert('LA')
+        input_image=input_image.convert('L')
+#         gray = ImageOps.grayscale(input_image)
+        input_image = ImageOps.colorize(gray, (0, 0, 0), (255,255,255))
 
     input_image = np.asarray(input_image)
     height = input_image.shape[0]

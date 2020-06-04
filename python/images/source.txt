@@ -1,0 +1,6 @@
+These Images come as part of the Tiny ImageNet Dataset
+https://tiny-imagenet.herokuapp.com/
+We took 100 images as a subset of this, and converted them to the bmp format required by the programs we wrote.
+
+
+The authors of this dataset are Fei-Fei Li, Andrej Karpathy, and Justin Johnson, they provide this dataset as part of their cs231n course at Stanford university http://cs231n.stanford.edu/
