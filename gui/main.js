@@ -541,7 +541,7 @@ function performFilter(){
 
             clearOldTimingData();
 
-            const pythonChild = spawn("python",[pythonScript]);
+            const pythonChild = spawn("python3",[pythonScript]);
             const openMPChild = spawn(openMPExecutable);
             let pythonDone = false;
             let openMPDone = false;

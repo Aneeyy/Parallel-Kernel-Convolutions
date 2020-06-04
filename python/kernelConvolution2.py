@@ -10,7 +10,6 @@ from PIL import Image
 from scipy import signal as sg
 
 from multiprocessing.pool import ThreadPool as Pool
-# from multiprocessing import shared_memory
 from functools import partial
 
 # from joblib import Parallel, delayed
@@ -54,6 +53,7 @@ def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, mak
     for index in range(3):
         piece = sg.convolve2d(input_image[:,:,index],np.asarray(kernel),boundary='symm', mode='same')
         output_image.append(piece)
+    output_image = numpy.array(output_image)
     output_image = np.stack(output_image, axis=2).astype("uint8")
     # for row in range(input_image.height):
     #     #rowStart = input_image.width * row
@@ -137,11 +137,10 @@ def join (imageSlices, input_image,height,width):
     # out = [ind[0] for ind in input_image]
     # print(len(input_image))
     out = input_image[0]
-
+    print(out)
     # IF YOU TRIED TO SPLIT THE DATA BETTER, SOW IT HERE
     for x in range(1,len(input_image)):
         out = np.concatenate((np.asarray(out), np.asarray(input_image[x])),axis=1)
-    #out = np.stack(out, axis=2).astype("uint8")
     out = out.transpose(1,2,0)
 
 
@@ -150,72 +149,15 @@ def join (imageSlices, input_image,height,width):
     return out
 
 def f(img,kernel):
-    output_image = []
+    output_image = np.empty((3,img.shape[0]))#np.array([])
     # print(img.shape)
     for index in range(3):
         piece = sg.convolve2d(img[:,:,index],np.asarray(kernel),boundary='symm', mode='same')
-        output_image.append(piece)
-        # print("im working")
-
+#         print(piece)
+        output_image[index] = np.append(output_image,piece)
+#         print("im working")
+#     print(output_image)
     return output_image
-
-def partialConv(row, kernel, input_shm_name, output_shm_name,shape, dType):
-    print(row)
-    input_image_shm = shared_memory.SharedMemory(name=input_shm_name)
-    input_image = np.ndarray(shape, dtype=dType, buffer=input_image_shm.buf)
-#     print(input_image[row][0])
-
-#
-# def convolute1(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
-#     input_image = Image.open(inputFile)
-#     if makeGreyScale:
-#         input_image = input_image.convert('LA')
-#     start_time = timeit.default_timer()
-#     input_image = np.asarray(input_image)
-#     #output_image = np.asarray(input_image)
-#
-#     height = input_image.shape[0]
-#     width = input_image.shape[1]
-#
-#     # create shared memory region for input and output image
-#     shared_input = shared_memory.SharedMemory(create=True, size=input_image.nbytes)
-#     shared_input_id = shared_input.name
-#     shared_output = shared_memory.SharedMemory(create=True, size=input_image.nbytes)
-#     shared_output_id = shared_output.name
-#
-#     # copy data in image buffer to shared memory buffer
-#     input_np = np.ndarray(input_image.shape, dtype=input_image.dtype, buffer=shared_input.buf)
-#     input_np[:] = input_image[:]
-#
-#     call_convolute = partial(partialConv,kernel=kernel, input_shm_name=shared_input_id, output_shm_name=shared_output_id,shape=input_image.shape,dType=input_image.dtype)
-#
-#     with Pool(processes=numThreads) as pool:
-#         pool.map(call_convolute, range(height))
-#
-#
-#     elapsed = timeit.default_timer() - start_time
-#
-#     #output_image = join(imageSlices,output_image,height,width)
-#     output_np = np.ndarray(input_image.shape, dtype=input_image.dtype, buffer=shared_output.buf)
-#     output_image = Image.fromarray(output_np.astype('uint8'))
-#
-#     shared_input.close()
-#     shared_input.unlink()
-#     shared_output.close()
-#     shared_output.unlink()
-#
-#     if shouldSave:
-#         print("saving..")
-#         # output_image.convert('RGB')
-#         output_image.save(fileOutputLocation)
-#
-#
-#
-#
-#     return elapsed
-#
-#
-
 
 def convoluteFileParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
 	# pool = mp.Pool(processes=numThreads)
@@ -228,8 +170,9 @@ def convoluteFileParallel(inputFile, fileOutputLocation,kernel,numThreads, makeG
     input_image = np.asarray(input_image)
     height = input_image.shape[0]
     width = input_image.shape[1]
-
-    print("Width: " + str(input_image[0][0]))
+    print(width)
+    print(height)
+    print("_")
 
     start_time = timeit.default_timer()
 
@@ -306,7 +249,7 @@ def main():
             numThreads = sys.argv[3]
             kernelSize = sys.argv[4]
             kernel = getDummyKernel(int(kernelSize))
-            shouldWriteToTiming = False
+            shouldWriteToTiming = True
             makeGreyScale = False # disable this
     else:
         with open('../transferData/config.json') as f:
@@ -318,34 +261,26 @@ def main():
             numThreads = config['numThreads']
             makeGreyScale = config['greyScale']
             shouldSave = True
-            shouldWriteToTiming = True
             if not fileInputLocation:
                 print("invalid file input location")
                 return
 
-    nKernel = np.asarray(kernel)
-    nKernel = np.flip(nKernel,1)
-    #print(nKernel)
     #print(kernel)
 
     #This copy file function is in place of the filter that has to be written
     #In the implementation, read image from the input file, and write image to output file
     #then replace the 100.01 with the seconds it took to perform the kernel convolution
 #     copyfile(inputFile, fileOutputLocation)
-    #time = convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
-    time = None
-    if numThreads == 1:
-        time = convoluteFileNoParallel(fileInputLocation,fileOutputLocation,nKernel, numThreads, makeGreyScale, shouldSave)
-    else:
-        time = convoluteFileParallel(fileInputLocation,fileOutputLocation,nKernel, numThreads, makeGreyScale, shouldSave)
-    #time = convolute1(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+    # time = convoluteFileNoParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+    time = convoluteFileParallel(fileInputLocation,fileOutputLocation,kernel, numThreads, makeGreyScale, shouldSave)
+
     print("time: " + str(time))
     #kernel
     if shouldWriteToTiming:
         with open('../transferData/pythonTiming.json', "r+") as pf:
             pythonTiming = json.load(pf)
             pythonTiming['fileOutputLocation'] = fileOutputLocation
-            pythonTiming['timing'] = round(time,6)
+            pythonTiming['timing'] = time
             pf.seek(0)
             json.dump(pythonTiming, pf)
             pf.truncate()
