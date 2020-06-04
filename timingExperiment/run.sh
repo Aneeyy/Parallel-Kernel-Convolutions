@@ -10,6 +10,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=jwheeler@scu.edu
 
+
 module load SciPy-bundle/2019.03-foss-2019a
 
 export JSLOG=1
@@ -18,7 +19,9 @@ export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 
 echo "["
-WD=/WAVE/users/unix/jwheeler/projectsHome/Parallel-Kernel-Convolutions
+WD=/WAVE/users/unix/jwheeler/projectsHome/Parallel-Kernel-Convolutions-master
+source ${WD}/python/virtualenv/bin/activate
+
 for ThreadNum in 1 2 4 8 16 28
   do
   echo "{ThreadNum: ${ThreadNum},"
