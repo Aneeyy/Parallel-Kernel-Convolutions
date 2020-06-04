@@ -171,7 +171,7 @@ void copyFile(char* s, char* d){
         fputc(fgetc(source), dest);
     }
 
-    printf("File copied successfully.\n");
+    //printf("File copied successfully.\n");
     fclose(source);
     fclose(dest);
 
@@ -256,12 +256,12 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 
 
     //print the kernel
-    printf("kernel size: %d , num threads %d:\n",kernelSize, nt);
+    //printf("kernel size: %d , num threads %d:\n",kernelSize, nt);
     for(int r = 0; r< kernelSize; r++){
         for(int c = 0; c< kernelSize; c++){
-            printf("%f \t",kernel[r][c]);
+            //printf("%f \t",kernel[r][c]);
         }
-        printf("\n");
+        //printf("\n");
     }
 
 
@@ -270,7 +270,7 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
 
 
     ReadImage(fileInputLocation, &pixels,&pixelsOut, &width, &height,&bytesPerPixel, &upsideDown, &unPaddedRowSize);
-    printf("unpadded row size %d\n",unPaddedRowSize);
+    //printf("unpadded row size %d\n",unPaddedRowSize);
 
 
     int pixStart = 0, rowStart=0, kPixStart=0, kRowStart;
@@ -373,9 +373,9 @@ void performConv(char* fileInputLocation,char* fileOutputLocation,int nt, double
     long micros = timer_end(beforeTime);
 
     *timingData =(double)micros / 1.e6;
-    printf("done! \n");
+    //printf("done! \n");
 
-    printf("should save: %d \n",shouldSave);
+    //printf("should save: %d \n",shouldSave);
     if(shouldSave){
         WriteImage(fileOutputLocation, pixelsOut, width, height, bytesPerPixel, upsideDown);
     }
@@ -426,7 +426,7 @@ int main(int argc, char * argv[]){
             fileInputLocation = argv[1];
             fileOutputLocation = argv[2];
             shouldSave = strncmp(argv[2],"-nosave",7);
-            printf("shouldSave:  %d\n",shouldSave);
+            //printf("shouldSave:  %d\n",shouldSave);
 
             numThreads = atoi(argv[3]);
 
@@ -459,7 +459,7 @@ int main(int argc, char * argv[]){
 
         makeGreyScale = cJSON_IsTrue(greyScaleBoolJSON);
 //        makeGreyScale = strncmp(greyScaleBoolJSON->valuestring,"true",4);
-        printf("grey scale:  %d\n",makeGreyScale);
+        //printf("grey scale:  %d\n",makeGreyScale);
         kernel = getKernel(configjson, &kernelSize);
 
     }

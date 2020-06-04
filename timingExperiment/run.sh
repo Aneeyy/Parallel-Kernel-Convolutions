@@ -8,19 +8,36 @@
 #SBATCH --output=kernelConvOutput.out
 #SBATCH --time=120:00
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=ssingh5@scu.edu
-#
+#SBATCH --mail-user=jwheeler@scu.edu
+
+module load SciPy-bundle/2019.03-foss-2019a
 
 export JSLOG=1
 export INWAVE=1
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 
-
-for THREADNUM in 1 2 4 8 12 14 16 20 24 28
-do
-	export OMP_NUM_THREADS=$THREADNUM
-	./openMP
-
+echo "["
+WD=/WAVE/users/unix/jwheeler/projectsHome/Parallel-Kernel-Convolutions
+for ThreadNum in 1 2 4 8 16 28
+  do
+  echo "{ThreadNum: ${ThreadNum},"
+  for ImageNum in {0..99}
+  do
+    export OMP_NUM_THREADS=$THREADNUM
+    echo "OpenMP:["
+    for AttemptOpenMP in {0..5}
+    do
+      ${WD}/OpenMP/openMP ${WD}/timingExperiment/images/test_${ImageNum}.bmp -nosave ${ThreadNum} 3
+      echo ","
+    done
+    echo "],Python:["
+    for AttemptPython in {0..5}
+    do
+      python3 ${WD}/python/kernelConvolution.py ${WD}/timingExperiment/images/test_${ImageNum}.bmp -nosave ${ThreadNum} 3
+      echo ","
+    done
+    echo "]},"
+  done
 done
 
