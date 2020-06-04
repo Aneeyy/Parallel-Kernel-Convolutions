@@ -6,54 +6,70 @@ import timeit
 from shutil import copyfile
 from scipy import misc
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
+from scipy import signal as sg
 def convoluteFileNoParallel(inputFile, fileOutputLocation,kernel,numThreads, makeGreyScale, shouldSave):
     input_image = Image.open(inputFile)
-    input_pixels = input_image.load()
-
-    output_image = Image.new("RGB", input_image.size)
-    draw = ImageDraw.Draw(output_image)
-
-    edgeSize = len(kernel) // 2
+    # input_pixels = input_image
+    # input_image = misc.imread(inputFile, False, mode='L')
+    # input_pixels = input_image.load()
+    # kernel = np.asarray(kernel)
+    # output_image = Image.new("RGB", input_image.size)
+    # draw = ImageDraw.Draw(output_image)
+    
+    # edgeSize = len(kernel) // 2
+    # Numpy Code
+    input_image = np.asarray(input_image)
+    # output_image = np.zeros((input_pixels.shape[0],input_pixels.shape[1],input_pixels.shape[2]))
 
     if(makeGreyScale):
         for row in range(input_image.height):
             #rowStart = input_image.width * row
             for col in range(input_image.width):
-                pixel = input_pixels[col,row]
+                pixel = input_pixels[row][col]
                 acc = pixel[0]
                 acc += pixel[1]
                 acc += pixel[2]
                 acc = int(acc/3)
-                input_pixels[col,row] = (acc,acc,acc)
-#                 pixel[0] = acc
-#                 pixel[1] = acc
-#                 pixel[2] = acc
+                input_pixels[row][col] = np.asarray([acc,acc,acc])
+                # pixel[0] = acc
+                # pixel[1] = acc
+                # pixel[2] = acc
 
-
+    output_image = []
     start = timeit.default_timer()
-    for row in range(input_image.height):
-        #rowStart = input_image.width * row
-        for col in range(input_image.width):
-            #pixStart = rowStart + col
-            pixel = input_pixels[col,row]
+    # print(np.asarray(input_image).shape)
+    # print(np.asarray(kernel).shape)
+    for index in range(3):
+        piece = sg.convolve2d(input_image[:,:,index],np.asarray(kernel),boundary='symm', mode='same')
+        output_image.append(piece)
+    output_image = np.stack(output_image, axis=2).astype("uint8")
+    # for row in range(input_image.height):
+    #     #rowStart = input_image.width * row
+    #     print(row)
+    #     for col in range(input_image.width):
+    #         #pixStart = rowStart + col
+    #         pixel = input_pixels[row][col]
 
-            if row - edgeSize < 0 or row + edgeSize > input_image.height-1 or col-edgeSize < 0 or col+edgeSize > input_image.width-1:
-                draw.point((col, row), pixel)
-            else:
-                acc = [0, 0, 0]
-                for rowK in range(len(kernel)):
-                    for colK in range(len(kernel)):
+    #         if row - edgeSize < 0 or row + edgeSize > input_image.height-1 or col-edgeSize < 0 or col+edgeSize > input_image.width-1:
+    #             # draw.point((row, col), tuple(pixel))
+    #             output_image[row][col] = pixel
+    #         else:
+    #             acc = np.zeros(3)
+    #             for rowK in range(len(kernel)):
+    #                 for colK in range(len(kernel)):
 
-                        kPixel = input_pixels[col- edgeSize + colK, row- edgeSize + rowK]
-                        acc[0] += kPixel[0] * kernel[rowK][colK]
-                        acc[1] += kPixel[1] * kernel[rowK][colK]
-                        acc[2] += kPixel[2] * kernel[rowK][colK]
+    #                     kPixel = input_pixels[ row- edgeSize + rowK][col- edgeSize + colK]
+    #                     acc = np.sum(np.multiply(kPixel,kernel[rowK][colK]))
+    #                     # acc[0] += kPixel[0] * kernel[rowK][colK]
+    #                     # acc[1] += kPixel[1] * kernel[rowK][colK]
+    #                     # acc[2] += kPixel[2] * kernel[rowK][colK]
 
-                draw.point((col, row), (int(acc[0]), int(acc[1]), int(acc[2])))
+    #             # draw.point((col, row), (int(acc[0]), int(acc[1]), int(acc[2])))
+    #             output_image[row][col] = acc
 
     elapsed = timeit.default_timer() - start
-
+    output_image = Image.fromarray(output_image)
     if shouldSave:
         print("saving..")
         output_image.save(fileOutputLocation)
